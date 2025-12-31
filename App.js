@@ -1,9 +1,14 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import { ActivityIndicator, View } from 'react-native';
 
-// Import screens
-import LoginScreen from './src/screens/LoginScreen';
+// Import auth screens
+import SignUpScreen from './src/screens/auth/SignUpScreen';
+import SignInScreen from './src/screens/auth/SignInScreen';
+import ForgotPasswordScreen from './src/screens/auth/ForgotPasswordScreen';
+
+// Import main screens
 import DashboardScreen from './src/screens/DashboardScreen';
 import CreateInvoiceScreen from './src/screens/CreateInvoiceScreen';
 import RecordPaymentScreen from './src/screens/RecordPaymentScreen';
@@ -13,32 +18,83 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import CustomerManagementScreen from './src/screens/CustomerManagementScreen';
 import ProductManagementScreen from './src/screens/ProductManagementScreen';
 
+// Import services
+import { AuthService } from './src/services/AuthService';
+
 // Import Error Boundary
 import ErrorBoundary from './src/components/ErrorBoundary';
 
 const Stack = createStackNavigator();
 
 const App = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
+  const checkAuthStatus = async () => {
+    try {
+      const authenticated = await AuthService.isAuthenticated();
+      setIsAuthenticated(authenticated);
+    } catch (error) {
+      console.error('Auth check error:', error);
+      setIsAuthenticated(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' }}>
+        <ActivityIndicator size="large" color="#1A1A1A" />
+      </View>
+    );
+  }
+
   return (
     <ErrorBoundary>
       <NavigationContainer>
         <Stack.Navigator
-          initialRouteName="Login"
+          initialRouteName={isAuthenticated ? 'Dashboard' : 'SignIn'}
           screenOptions={{
             headerStyle: {
-              backgroundColor: '#007AFF',
+              backgroundColor: '#FFFFFF',
+              elevation: 0,
+              shadowOpacity: 0,
+              borderBottomWidth: 1,
+              borderBottomColor: '#E0E0E0',
             },
-            headerTintColor: '#fff',
+            headerTintColor: '#1A1A1A',
             headerTitleStyle: {
-              fontWeight: 'bold',
+              fontWeight: '600',
+              fontSize: 18,
             },
           }}
         >
+          {/* Auth Screens */}
           <Stack.Screen 
-            name="Login" 
-            component={LoginScreen}
+            name="SignIn" 
+            component={SignInScreen}
             options={{ headerShown: false }}
           />
+          <Stack.Screen 
+            name="SignUp" 
+            component={SignUpScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="ForgotPassword" 
+            component={ForgotPasswordScreen}
+            options={{ 
+              title: 'Reset Password',
+              headerBackTitle: 'Back'
+            }}
+          />
+
+          {/* Main App Screens */}
           <Stack.Screen 
             name="Dashboard" 
             component={DashboardScreen}

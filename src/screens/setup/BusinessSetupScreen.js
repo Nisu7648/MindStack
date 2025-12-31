@@ -96,261 +96,275 @@ const BusinessSetupScreen = ({ navigation }) => {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Set up your business</Text>
-        <Text style={styles.subtitle}>This helps us prepare correct books for you</Text>
-      </View>
-
-      {/* Section 1: Business Identity */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🧩 BUSINESS IDENTITY</Text>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>
-            Business Name <Text style={styles.required}>*</Text>
-          </Text>
-          <TextInput
-            style={[styles.input, errors.businessName && styles.inputError]}
-            placeholder="e.g. Shree Ram Kirana Store"
-            placeholderTextColor="#999"
-            value={formData.businessName}
-            onChangeText={(text) => {
-              setFormData({ ...formData, businessName: text });
-              setErrors({ ...errors, businessName: '' });
-            }}
-          />
-          {errors.businessName && (
-            <Text style={styles.errorText}>{errors.businessName}</Text>
-          )}
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>
-            Business Type <Text style={styles.required}>*</Text>
-          </Text>
-          <View style={styles.businessTypeContainer}>
-            <TouchableOpacity
-              style={[
-                styles.businessTypeCard,
-                formData.businessType === 'trader' && styles.businessTypeCardSelected,
-                errors.businessType && styles.inputError,
-              ]}
-              onPress={() => {
-                setFormData({ ...formData, businessType: 'trader' });
-                setErrors({ ...errors, businessType: '' });
-              }}
-            >
-              <Text style={styles.businessTypeIcon}>🏪</Text>
-              <Text
-                style={[
-                  styles.businessTypeText,
-                  formData.businessType === 'trader' && styles.businessTypeTextSelected,
-                ]}
-              >
-                Trader / Shop
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.businessTypeCard,
-                formData.businessType === 'service' && styles.businessTypeCardSelected,
-                errors.businessType && styles.inputError,
-              ]}
-              onPress={() => {
-                setFormData({ ...formData, businessType: 'service' });
-                setErrors({ ...errors, businessType: '' });
-              }}
-            >
-              <Text style={styles.businessTypeIcon}>🧑‍💻</Text>
-              <Text
-                style={[
-                  styles.businessTypeText,
-                  formData.businessType === 'service' && styles.businessTypeTextSelected,
-                ]}
-              >
-                Service Business
-              </Text>
-            </TouchableOpacity>
-          </View>
-          {errors.businessType && (
-            <Text style={styles.errorText}>{errors.businessType}</Text>
-          )}
-          <Text style={styles.helperText}>
-            This controls Trading A/c vs Service P&L logic
-          </Text>
-        </View>
-      </View>
-
-      {/* Section 2: GST & Location */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🧾 GST & LOCATION</Text>
-
-        <View style={styles.inputContainer}>
-          <View style={styles.toggleContainer}>
-            <Text style={styles.label}>
-              GST Registered? <Text style={styles.required}>*</Text>
-            </Text>
-            <Switch
-              value={formData.gstRegistered}
-              onValueChange={(value) =>
-                setFormData({ ...formData, gstRegistered: value })
-              }
-              trackColor={{ false: '#E0E0E0', true: '#1A1A1A' }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-        </View>
-
-        {formData.gstRegistered && (
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>GSTIN (Optional)</Text>
-            <TextInput
-              style={[styles.input, errors.gstin && styles.inputError]}
-              placeholder="e.g. 27AABCU9603R1ZM"
-              placeholderTextColor="#999"
-              value={formData.gstin}
-              onChangeText={(text) => {
-                setFormData({ ...formData, gstin: text.toUpperCase() });
-                setErrors({ ...errors, gstin: '' });
-              }}
-              maxLength={15}
-              autoCapitalize="characters"
-            />
-            {errors.gstin && <Text style={styles.errorText}>{errors.gstin}</Text>}
-          </View>
-        )}
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>
-            State <Text style={styles.required}>*</Text>
-          </Text>
-          <View style={[styles.pickerContainer, errors.state && styles.inputError]}>
-            <Picker
-              selectedValue={formData.state}
-              onValueChange={(value) => {
-                setFormData({ ...formData, state: value });
-                setErrors({ ...errors, state: '' });
-              }}
-              style={styles.picker}
-            >
-              <Picker.Item label="Select your state" value="" />
-              {INDIAN_STATES.map((state) => (
-                <Picker.Item key={state} label={state} value={state} />
-              ))}
-            </Picker>
-          </View>
-          {errors.state && <Text style={styles.errorText}>{errors.state}</Text>}
-          <Text style={styles.helperText}>
-            Needed for CGST/SGST vs IGST logic
-          </Text>
-        </View>
-      </View>
-
-      {/* Section 3: Financial Settings */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>📆 FINANCIAL SETTINGS</Text>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>
-            Financial Year Start <Text style={styles.required}>*</Text>
-          </Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={formData.financialYearStart}
-              onValueChange={(value) =>
-                setFormData({ ...formData, financialYearStart: value })
-              }
-              style={styles.picker}
-            >
-              <Picker.Item label="1 April" value="1 April" />
-              <Picker.Item label="1 January" value="1 January" />
-              <Picker.Item label="1 July" value="1 July" />
-              <Picker.Item label="1 October" value="1 October" />
-            </Picker>
-          </View>
-          <Text style={styles.helperText}>Locks reporting periods</Text>
-        </View>
-      </View>
-
-      {/* Section 4: Business Scale */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>💼 BUSINESS SCALE</Text>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Monthly Transactions (Estimate)</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={formData.monthlyTransactions}
-              onValueChange={(value) =>
-                setFormData({ ...formData, monthlyTransactions: value })
-              }
-              style={styles.picker}
-            >
-              <Picker.Item label="Select (Optional)" value="" />
-              <Picker.Item label="< 100" value="<100" />
-              <Picker.Item label="100 – 500" value="100-500" />
-              <Picker.Item label="500+" value="500+" />
-            </Picker>
-          </View>
-          <Text style={styles.helperText}>
-            Used only for internal tuning, not user-facing
-          </Text>
-        </View>
-      </View>
-
-      {/* Section 5: Confirmation */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🔐 CONFIRMATION</Text>
-
-        <TouchableOpacity
-          style={styles.checkboxContainer}
-          onPress={() =>
-            setFormData({
-              ...formData,
-              confirmationChecked: !formData.confirmationChecked,
-            })
-          }
+    <View style={styles.container}>
+      {/* Header with Menu Button */}
+      <View style={styles.topBar}>
+        <TouchableOpacity 
+          style={styles.menuButton}
+          onPress={() => navigation.openDrawer?.() || Alert.alert('Menu', 'Menu functionality')}
         >
-          <View
-            style={[
-              styles.checkbox,
-              formData.confirmationChecked && styles.checkboxChecked,
-              errors.confirmation && styles.inputError,
-            ]}
-          >
-            {formData.confirmationChecked && (
-              <Text style={styles.checkmark}>✓</Text>
+          <View style={styles.menuLine} />
+          <View style={styles.menuLine} />
+          <View style={styles.menuLine} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Set up your business</Text>
+          <Text style={styles.subtitle}>This helps us prepare correct books for you</Text>
+        </View>
+
+        {/* Section 1: Business Identity */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🧩 BUSINESS IDENTITY</Text>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>
+              Business Name <Text style={styles.required}>*</Text>
+            </Text>
+            <TextInput
+              style={[styles.input, errors.businessName && styles.inputError]}
+              placeholder="e.g. Shree Ram Kirana Store"
+              placeholderTextColor="#999"
+              value={formData.businessName}
+              onChangeText={(text) => {
+                setFormData({ ...formData, businessName: text });
+                setErrors({ ...errors, businessName: '' });
+              }}
+            />
+            {errors.businessName && (
+              <Text style={styles.errorText}>{errors.businessName}</Text>
             )}
           </View>
-          <Text style={styles.checkboxLabel}>
-            I understand MindStack prepares accounting books automatically based on
-            my entries
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>
+              Business Type <Text style={styles.required}>*</Text>
+            </Text>
+            <View style={styles.businessTypeContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.businessTypeCard,
+                  formData.businessType === 'trader' && styles.businessTypeCardSelected,
+                  errors.businessType && styles.inputError,
+                ]}
+                onPress={() => {
+                  setFormData({ ...formData, businessType: 'trader' });
+                  setErrors({ ...errors, businessType: '' });
+                }}
+              >
+                <Text style={styles.businessTypeIcon}>🏪</Text>
+                <Text
+                  style={[
+                    styles.businessTypeText,
+                    formData.businessType === 'trader' && styles.businessTypeTextSelected,
+                  ]}
+                >
+                  Trader / Shop
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.businessTypeCard,
+                  formData.businessType === 'service' && styles.businessTypeCardSelected,
+                  errors.businessType && styles.inputError,
+                ]}
+                onPress={() => {
+                  setFormData({ ...formData, businessType: 'service' });
+                  setErrors({ ...errors, businessType: '' });
+                }}
+              >
+                <Text style={styles.businessTypeIcon}>🧑‍💻</Text>
+                <Text
+                  style={[
+                    styles.businessTypeText,
+                    formData.businessType === 'service' && styles.businessTypeTextSelected,
+                  ]}
+                >
+                  Service Business
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {errors.businessType && (
+              <Text style={styles.errorText}>{errors.businessType}</Text>
+            )}
+            <Text style={styles.helperText}>
+              This controls Trading A/c vs Service P&L logic
+            </Text>
+          </View>
+        </View>
+
+        {/* Section 2: GST & Location */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🧾 GST & LOCATION</Text>
+
+          <View style={styles.inputContainer}>
+            <View style={styles.toggleContainer}>
+              <Text style={styles.label}>
+                GST Registered? <Text style={styles.required}>*</Text>
+              </Text>
+              <Switch
+                value={formData.gstRegistered}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, gstRegistered: value })
+                }
+                trackColor={{ false: '#E0E0E0', true: '#1A1A1A' }}
+                thumbColor="#FFFFFF"
+              />
+            </View>
+          </View>
+
+          {formData.gstRegistered && (
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>GSTIN (Optional)</Text>
+              <TextInput
+                style={[styles.input, errors.gstin && styles.inputError]}
+                placeholder="e.g. 27AABCU9603R1ZM"
+                placeholderTextColor="#999"
+                value={formData.gstin}
+                onChangeText={(text) => {
+                  setFormData({ ...formData, gstin: text.toUpperCase() });
+                  setErrors({ ...errors, gstin: '' });
+                }}
+                maxLength={15}
+                autoCapitalize="characters"
+              />
+              {errors.gstin && <Text style={styles.errorText}>{errors.gstin}</Text>}
+            </View>
+          )}
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>
+              State <Text style={styles.required}>*</Text>
+            </Text>
+            <View style={[styles.pickerContainer, errors.state && styles.inputError]}>
+              <Picker
+                selectedValue={formData.state}
+                onValueChange={(value) => {
+                  setFormData({ ...formData, state: value });
+                  setErrors({ ...errors, state: '' });
+                }}
+                style={styles.picker}
+              >
+                <Picker.Item label="Select your state" value="" />
+                {INDIAN_STATES.map((state) => (
+                  <Picker.Item key={state} label={state} value={state} />
+                ))}
+              </Picker>
+            </View>
+            {errors.state && <Text style={styles.errorText}>{errors.state}</Text>}
+            <Text style={styles.helperText}>
+              Needed for CGST/SGST vs IGST logic
+            </Text>
+          </View>
+        </View>
+
+        {/* Section 3: Financial Settings */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>📆 FINANCIAL SETTINGS</Text>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>
+              Financial Year Start <Text style={styles.required}>*</Text>
+            </Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={formData.financialYearStart}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, financialYearStart: value })
+                }
+                style={styles.picker}
+              >
+                <Picker.Item label="1 April" value="1 April" />
+                <Picker.Item label="1 January" value="1 January" />
+                <Picker.Item label="1 July" value="1 July" />
+                <Picker.Item label="1 October" value="1 October" />
+              </Picker>
+            </View>
+            <Text style={styles.helperText}>Locks reporting periods</Text>
+          </View>
+        </View>
+
+        {/* Section 4: Business Scale */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>💼 BUSINESS SCALE</Text>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Monthly Transactions (Estimate)</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={formData.monthlyTransactions}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, monthlyTransactions: value })
+                }
+                style={styles.picker}
+              >
+                <Picker.Item label="Select (Optional)" value="" />
+                <Picker.Item label="< 100" value="<100" />
+                <Picker.Item label="100 – 500" value="100-500" />
+                <Picker.Item label="500+" value="500+" />
+              </Picker>
+            </View>
+            <Text style={styles.helperText}>
+              Used only for internal tuning, not user-facing
+            </Text>
+          </View>
+        </View>
+
+        {/* Section 5: Confirmation */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🔐 CONFIRMATION</Text>
+
+          <TouchableOpacity
+            style={styles.checkboxContainer}
+            onPress={() =>
+              setFormData({
+                ...formData,
+                confirmationChecked: !formData.confirmationChecked,
+              })
+            }
+          >
+            <View
+              style={[
+                styles.checkbox,
+                formData.confirmationChecked && styles.checkboxChecked,
+                errors.confirmation && styles.inputError,
+              ]}
+            >
+              {formData.confirmationChecked && (
+                <Text style={styles.checkmark}>✓</Text>
+              )}
+            </View>
+            <Text style={styles.checkboxLabel}>
+              I understand MindStack prepares accounting books automatically based on
+              my entries
+            </Text>
+          </TouchableOpacity>
+          {errors.confirmation && (
+            <Text style={styles.errorText}>{errors.confirmation}</Text>
+          )}
+        </View>
+
+        {/* Submit Button */}
+        <TouchableOpacity
+          style={[
+            styles.submitButton,
+            (!isFormValid() || loading) && styles.submitButtonDisabled,
+          ]}
+          onPress={handleSubmit}
+          disabled={!isFormValid() || loading}
+        >
+          <Text style={styles.submitButtonText}>
+            {loading ? 'Setting up...' : 'Start Accounting'}
           </Text>
         </TouchableOpacity>
-        {errors.confirmation && (
-          <Text style={styles.errorText}>{errors.confirmation}</Text>
-        )}
-      </View>
 
-      {/* Submit Button */}
-      <TouchableOpacity
-        style={[
-          styles.submitButton,
-          (!isFormValid() || loading) && styles.submitButtonDisabled,
-        ]}
-        onPress={handleSubmit}
-        disabled={!isFormValid() || loading}
-      >
-        <Text style={styles.submitButtonText}>
-          {loading ? 'Setting up...' : 'Start Accounting'}
-        </Text>
-      </TouchableOpacity>
-
-      <View style={styles.bottomPadding} />
-    </ScrollView>
+        <View style={styles.bottomPadding} />
+      </ScrollView>
+    </View>
   );
 };
 
@@ -359,9 +373,32 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  topBar: {
+    paddingHorizontal: 24,
+    paddingTop: 50,
+    paddingBottom: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  menuButton: {
+    width: 32,
+    height: 32,
+    justifyContent: 'space-around',
+    paddingVertical: 6,
+  },
+  menuLine: {
+    width: 24,
+    height: 2,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
   scrollContent: {
     paddingHorizontal: 24,
-    paddingTop: 40,
+    paddingTop: 24,
   },
   header: {
     marginBottom: 32,

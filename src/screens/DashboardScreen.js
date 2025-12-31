@@ -11,18 +11,30 @@ import {
   Animated,
 } from 'react-native';
 import { TransactionService } from '../services/TransactionService';
+import { SetupService } from '../services/SetupService';
+import MenuDrawer from '../components/MenuDrawer';
 
 const DashboardScreen = ({ navigation }) => {
   const [inputText, setInputText] = useState('');
   const [transactions, setTransactions] = useState([]);
   const [isRecording, setIsRecording] = useState(false);
   const [currentDate, setCurrentDate] = useState('');
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [businessSetup, setBusinessSetup] = useState(null);
   const micScale = new Animated.Value(1);
 
   useEffect(() => {
     loadTodayTransactions();
     updateDate();
+    loadBusinessSetup();
   }, []);
+
+  const loadBusinessSetup = async () => {
+    const result = await SetupService.getBusinessSetup();
+    if (result.success) {
+      setBusinessSetup(result.data);
+    }
+  };
 
   const updateDate = () => {
     const today = new Date();
@@ -120,7 +132,7 @@ const DashboardScreen = ({ navigation }) => {
         <View style={styles.topBarLeft}>
           <TouchableOpacity 
             style={styles.menuButton}
-            onPress={() => navigation.openDrawer?.()}
+            onPress={() => setMenuVisible(true)}
           >
             <View style={styles.menuLine} />
             <View style={styles.menuLine} />
@@ -206,6 +218,14 @@ const DashboardScreen = ({ navigation }) => {
           <Text style={styles.recordingText}>Listening...</Text>
         </View>
       )}
+
+      {/* Menu Drawer */}
+      <MenuDrawer
+        visible={menuVisible}
+        onClose={() => setMenuVisible(false)}
+        navigation={navigation}
+        businessSetup={businessSetup}
+      />
     </KeyboardAvoidingView>
   );
 };

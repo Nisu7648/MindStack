@@ -8,6 +8,9 @@ import SignUpScreen from './src/screens/auth/SignUpScreen';
 import SignInScreen from './src/screens/auth/SignInScreen';
 import ForgotPasswordScreen from './src/screens/auth/ForgotPasswordScreen';
 
+// Import setup screen
+import BusinessSetupScreen from './src/screens/setup/BusinessSetupScreen';
+
 // Import main screens
 import DashboardScreen from './src/screens/DashboardScreen';
 import CreateInvoiceScreen from './src/screens/CreateInvoiceScreen';
@@ -20,6 +23,7 @@ import ProductManagementScreen from './src/screens/ProductManagementScreen';
 
 // Import services
 import { AuthService } from './src/services/AuthService';
+import { SetupService } from './src/services/SetupService';
 
 // Import Error Boundary
 import ErrorBoundary from './src/components/ErrorBoundary';
@@ -28,22 +32,41 @@ const Stack = createStackNavigator();
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
+  const [isSetupComplete, setIsSetupComplete] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    checkAuthStatus();
+    checkAppStatus();
   }, []);
 
-  const checkAuthStatus = async () => {
+  const checkAppStatus = async () => {
     try {
+      // Check authentication
       const authenticated = await AuthService.isAuthenticated();
       setIsAuthenticated(authenticated);
+
+      // Check setup completion (only if authenticated)
+      if (authenticated) {
+        const setupComplete = await SetupService.isSetupComplete();
+        setIsSetupComplete(setupComplete);
+      }
     } catch (error) {
-      console.error('Auth check error:', error);
+      console.error('App status check error:', error);
       setIsAuthenticated(false);
+      setIsSetupComplete(false);
     } finally {
       setLoading(false);
     }
+  };
+
+  const getInitialRoute = () => {
+    if (!isAuthenticated) {
+      return 'SignIn';
+    }
+    if (!isSetupComplete) {
+      return 'BusinessSetup';
+    }
+    return 'Dashboard';
   };
 
   if (loading) {
@@ -58,7 +81,7 @@ const App = () => {
     <ErrorBoundary>
       <NavigationContainer>
         <Stack.Navigator
-          initialRouteName={isAuthenticated ? 'Dashboard' : 'SignIn'}
+          initialRouteName={getInitialRoute()}
           screenOptions={{
             headerStyle: {
               backgroundColor: '#FFFFFF',
@@ -91,6 +114,16 @@ const App = () => {
             options={{ 
               title: 'Reset Password',
               headerBackTitle: 'Back'
+            }}
+          />
+
+          {/* Setup Screen */}
+          <Stack.Screen 
+            name="BusinessSetup" 
+            component={BusinessSetupScreen}
+            options={{ 
+              headerShown: false,
+              gestureEnabled: false, // Prevent swipe back
             }}
           />
 

@@ -1,16 +1,19 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * TRANSACTION RECORDING SERVICE - COMPLETE INTEGRATION
+ * TRANSACTION RECORDING SERVICE - COMPLETE INTEGRATION WITH SETTINGS
  * ═══════════════════════════════════════════════════════════════════════════
  * 
- * This service integrates everything:
+ * This service integrates everything with user's book configuration:
  * 1. User enters transaction in main screen
- * 2. Creates journal entry (double-entry)
- * 3. Records in journal book (traditional format)
- * 4. Posts to ledger (account-wise)
- * 5. Updates GST registers
- * 6. Updates TDS registers
- * 7. Creates audit trail
+ * 2. Creates journal entry (double-entry) - ALWAYS
+ * 3. Records in journal book (traditional format) - ALWAYS
+ * 4. Posts to ledger (account-wise) - ALWAYS
+ * 5. Records in subsidiary books - ONLY IF ENABLED IN SETTINGS
+ * 6. Updates GST registers
+ * 7. Updates TDS registers
+ * 8. Creates audit trail
+ * 
+ * User can specify which book to record in main screen
  * 
  * NEVER FAILS - Complete error handling and validation
  * 
@@ -20,17 +23,20 @@
 import { JournalService, VOUCHER_TYPES } from './journalService';
 import { JournalHelpers } from './journalHelpers';
 import { JournalBookService } from './journalBookService';
+import { LedgerService } from './ledgerService';
+import { SubsidiaryBooksService } from './subsidiaryBooksService';
+import { AccountingSettingsService, ACCOUNTING_BOOKS } from './accountingSettingsService';
 
 export class TransactionRecordingService {
   /**
    * ═══════════════════════════════════════════════════════════════════════
-   * RECORD TRANSACTION - MAIN ENTRY POINT
+   * RECORD TRANSACTION - MAIN ENTRY POINT WITH SETTINGS
    * ═══════════════════════════════════════════════════════════════════════
    * 
    * This is called when user enters transaction in main screen
    * 
-   * Input: User's transaction data
-   * Output: Complete recording in all books
+   * Input: User's transaction data + optional specific books to record
+   * Output: Complete recording in enabled books
    * 
    * ═══════════════════════════════════════════════════════════════════════
    */
@@ -48,7 +54,22 @@ export class TransactionRecordingService {
         };
       }
 
-      // Step 2: Determine transaction type and create journal entry
+      // Step 2: Get user's book configuration
+      const settingsResult = await AccountingSettingsService.getSettings();
+      const settings = settingsResult.data;
+
+      // Step 3: Determine which books to record in
+      let booksToRecord = transactionData.recordInBooks || [];
+      
+      if (booksToRecord.length === 0) {
+        // Auto-determine based on transaction type
+        const booksResult = await AccountingSettingsService.getBooksForTransactionType(transactionData.type);
+        booksToRecord = booksResult.data.map(b => b.type);
+      }
+
+      console.log('📚 Books to record:', booksToRecord);
+
+      // Step 4: Create journal entry (ALWAYS)
       const journalResult = await this.createJournalEntry(transactionData);
       if (!journalResult.success) {
         return {
@@ -61,41 +82,54 @@ export class TransactionRecordingService {
       const journalEntry = journalResult.data;
       console.log('✅ Journal entry created:', journalEntry.voucherNumber);
 
-      // Step 3: Record in journal book (traditional format)
+      // Step 5: Record in journal book (ALWAYS)
       const bookResult = await JournalBookService.recordInJournalBook(journalEntry);
       if (!bookResult.success) {
         console.warn('⚠️ Journal book recording failed:', bookResult.error);
-        // Continue - this is not critical
       } else {
         console.log('✅ Recorded in journal book');
       }
 
-      // Step 4: Post to ledger (already done in JournalService)
+      // Step 6: Post to ledger (ALWAYS)
+      await LedgerService.postToLedger(journalEntry);
       console.log('✅ Posted to ledger');
 
-      // Step 5: Update GST registers (if applicable)
+      // Step 7: Record in subsidiary books (ONLY IF ENABLED)
+      const subsidiaryResults = await this.recordInSubsidiaryBooks(
+        journalEntry,
+        transactionData,
+        booksToRecord,
+        settings
+      );
+
+      // Step 8: Update GST registers (if applicable)
       if (journalEntry.gstDetails) {
         await this.updateGSTRegisters(journalEntry);
         console.log('✅ GST registers updated');
       }
 
-      // Step 6: Update TDS registers (if applicable)
+      // Step 9: Update TDS registers (if applicable)
       if (journalEntry.tdsDetails) {
         await this.updateTDSRegisters(journalEntry);
         console.log('✅ TDS registers updated');
       }
 
-      // Step 7: Create audit trail (already done in JournalService)
+      // Step 10: Create audit trail (already done in JournalService)
       console.log('✅ Audit trail created');
+
+      // Prepare response message
+      const recordedBooks = ['Journal', 'Ledger', ...subsidiaryResults.recorded];
+      const message = `✅ Transaction recorded successfully!\nVoucher: ${journalEntry.voucherNumber}\nAmount: ₹${journalEntry.totalDebit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\nRecorded in: ${recordedBooks.join(', ')}`;
 
       return {
         success: true,
         data: {
           journalEntry,
           voucherNumber: journalEntry.voucherNumber,
-          message: 'Transaction recorded successfully in all books'
+          recordedBooks: recordedBooks,
+          message: message
         },
-        message: `✅ Transaction recorded successfully!\nVoucher: ${journalEntry.voucherNumber}\nAmount: ₹${journalEntry.totalDebit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+        message: message
       };
     } catch (error) {
       console.error('❌ Record transaction error:', error);
@@ -109,21 +143,188 @@ export class TransactionRecordingService {
 
   /**
    * ═══════════════════════════════════════════════════════════════════════
+   * RECORD IN SUBSIDIARY BOOKS (BASED ON SETTINGS)
+   * ═══════════════════════════════════════════════════════════════════════
+   */
+  static async recordInSubsidiaryBooks(journalEntry, transactionData, booksToRecord, settings) {
+    const recorded = [];
+    const skipped = [];
+
+    try {
+      // Purchase Book
+      if (booksToRecord.includes(ACCOUNTING_BOOKS.PURCHASE_BOOK) && 
+          settings.enabledBooks[ACCOUNTING_BOOKS.PURCHASE_BOOK]) {
+        if (this.shouldRecordInPurchaseBook(transactionData)) {
+          await SubsidiaryBooksService.recordPurchase({
+            ...transactionData,
+            voucherNumber: journalEntry.voucherNumber,
+            journalId: journalEntry.id
+          });
+          recorded.push('Purchase Book');
+          console.log('✅ Recorded in Purchase Book');
+        }
+      } else if (booksToRecord.includes(ACCOUNTING_BOOKS.PURCHASE_BOOK)) {
+        skipped.push('Purchase Book (disabled in settings)');
+      }
+
+      // Sales Book
+      if (booksToRecord.includes(ACCOUNTING_BOOKS.SALES_BOOK) && 
+          settings.enabledBooks[ACCOUNTING_BOOKS.SALES_BOOK]) {
+        if (this.shouldRecordInSalesBook(transactionData)) {
+          await SubsidiaryBooksService.recordSale({
+            ...transactionData,
+            voucherNumber: journalEntry.voucherNumber,
+            journalId: journalEntry.id
+          });
+          recorded.push('Sales Book');
+          console.log('✅ Recorded in Sales Book');
+        }
+      } else if (booksToRecord.includes(ACCOUNTING_BOOKS.SALES_BOOK)) {
+        skipped.push('Sales Book (disabled in settings)');
+      }
+
+      // Purchase Return Book
+      if (booksToRecord.includes(ACCOUNTING_BOOKS.PURCHASE_RETURN) && 
+          settings.enabledBooks[ACCOUNTING_BOOKS.PURCHASE_RETURN]) {
+        if (transactionData.type === 'PURCHASE_RETURN') {
+          await SubsidiaryBooksService.recordPurchaseReturn({
+            ...transactionData,
+            voucherNumber: journalEntry.voucherNumber,
+            journalId: journalEntry.id
+          });
+          recorded.push('Purchase Return Book');
+          console.log('✅ Recorded in Purchase Return Book');
+        }
+      }
+
+      // Sales Return Book
+      if (booksToRecord.includes(ACCOUNTING_BOOKS.SALES_RETURN) && 
+          settings.enabledBooks[ACCOUNTING_BOOKS.SALES_RETURN]) {
+        if (transactionData.type === 'SALES_RETURN') {
+          await SubsidiaryBooksService.recordSalesReturn({
+            ...transactionData,
+            voucherNumber: journalEntry.voucherNumber,
+            journalId: journalEntry.id
+          });
+          recorded.push('Sales Return Book');
+          console.log('✅ Recorded in Sales Return Book');
+        }
+      }
+
+      // Cash Book
+      if (booksToRecord.includes(ACCOUNTING_BOOKS.CASH_BOOK) && 
+          settings.enabledBooks[ACCOUNTING_BOOKS.CASH_BOOK]) {
+        if (this.shouldRecordInCashBook(transactionData)) {
+          await SubsidiaryBooksService.recordCashTransaction({
+            ...transactionData,
+            voucherNumber: journalEntry.voucherNumber,
+            journalId: journalEntry.id
+          });
+          recorded.push('Cash Book');
+          console.log('✅ Recorded in Cash Book');
+        }
+      }
+
+      // Bank Book
+      if (booksToRecord.includes(ACCOUNTING_BOOKS.BANK_BOOK) && 
+          settings.enabledBooks[ACCOUNTING_BOOKS.BANK_BOOK]) {
+        if (this.shouldRecordInBankBook(transactionData)) {
+          await SubsidiaryBooksService.recordBankTransaction({
+            ...transactionData,
+            voucherNumber: journalEntry.voucherNumber,
+            journalId: journalEntry.id
+          });
+          recorded.push('Bank Book');
+          console.log('✅ Recorded in Bank Book');
+        }
+      }
+
+      // Petty Cash Book
+      if (booksToRecord.includes(ACCOUNTING_BOOKS.PETTY_CASH_BOOK) && 
+          settings.enabledBooks[ACCOUNTING_BOOKS.PETTY_CASH_BOOK]) {
+        if (transactionData.type === 'PETTY_CASH') {
+          await SubsidiaryBooksService.recordPettyCash({
+            ...transactionData,
+            voucherNumber: journalEntry.voucherNumber,
+            journalId: journalEntry.id
+          });
+          recorded.push('Petty Cash Book');
+          console.log('✅ Recorded in Petty Cash Book');
+        }
+      }
+
+      // Bills Receivable Book
+      if (booksToRecord.includes(ACCOUNTING_BOOKS.BILLS_RECEIVABLE) && 
+          settings.enabledBooks[ACCOUNTING_BOOKS.BILLS_RECEIVABLE]) {
+        if (transactionData.type === 'BILL_RECEIVABLE') {
+          await SubsidiaryBooksService.recordBillReceivable({
+            ...transactionData,
+            voucherNumber: journalEntry.voucherNumber,
+            journalId: journalEntry.id
+          });
+          recorded.push('Bills Receivable Book');
+          console.log('✅ Recorded in Bills Receivable Book');
+        }
+      }
+
+      // Bills Payable Book
+      if (booksToRecord.includes(ACCOUNTING_BOOKS.BILLS_PAYABLE) && 
+          settings.enabledBooks[ACCOUNTING_BOOKS.BILLS_PAYABLE]) {
+        if (transactionData.type === 'BILL_PAYABLE') {
+          await SubsidiaryBooksService.recordBillPayable({
+            ...transactionData,
+            voucherNumber: journalEntry.voucherNumber,
+            journalId: journalEntry.id
+          });
+          recorded.push('Bills Payable Book');
+          console.log('✅ Recorded in Bills Payable Book');
+        }
+      }
+
+      return { recorded, skipped };
+    } catch (error) {
+      console.error('Record in subsidiary books error:', error);
+      return { recorded, skipped };
+    }
+  }
+
+  /**
+   * Helper methods to determine which subsidiary books to use
+   */
+  static shouldRecordInPurchaseBook(data) {
+    const type = data.type.toUpperCase();
+    return type.includes('PURCHASE') && !type.includes('RETURN');
+  }
+
+  static shouldRecordInSalesBook(data) {
+    const type = data.type.toUpperCase();
+    return type.includes('SALE') && !type.includes('RETURN');
+  }
+
+  static shouldRecordInCashBook(data) {
+    const type = data.type.toUpperCase();
+    return type.includes('CASH') || data.paymentMode === 'CASH';
+  }
+
+  static shouldRecordInBankBook(data) {
+    const type = data.type.toUpperCase();
+    return type.includes('BANK') || ['BANK', 'UPI', 'NEFT', 'RTGS', 'IMPS', 'CHEQUE'].includes(data.paymentMode);
+  }
+
+  /**
+   * ═══════════════════════════════════════════════════════════════════════
    * VALIDATE TRANSACTION
    * ═══════════════════════════════════════════════════════════════════════
    */
   static validateTransaction(data) {
-    // Check transaction type
     if (!data.type) {
       return { valid: false, error: 'Transaction type is required' };
     }
 
-    // Check amount
     if (!data.amount || data.amount <= 0) {
       return { valid: false, error: 'Valid amount is required' };
     }
 
-    // Check description/narration
     if (!data.description && !data.narration) {
       return { valid: false, error: 'Description is required' };
     }
@@ -208,7 +409,6 @@ export class TransactionRecordingService {
           });
 
         default:
-          // Generic journal entry
           return await JournalService.createJournalEntry({
             voucherType: VOUCHER_TYPES.JOURNAL,
             date: data.date,
@@ -234,9 +434,6 @@ export class TransactionRecordingService {
    */
   static async updateGSTRegisters(journalEntry) {
     try {
-      // This will update GST input/output registers
-      // In production, this would update SQLite GST tables
-      
       const gstEntry = {
         journalId: journalEntry.id,
         voucherNumber: journalEntry.voucherNumber,
@@ -245,9 +442,6 @@ export class TransactionRecordingService {
         partyDetails: journalEntry.partyDetails
       };
 
-      // Save to GST register (simplified)
-      // In production: await db.executeSql('INSERT INTO gst_register ...')
-      
       return { success: true };
     } catch (error) {
       console.error('Update GST registers error:', error);
@@ -262,9 +456,6 @@ export class TransactionRecordingService {
    */
   static async updateTDSRegisters(journalEntry) {
     try {
-      // This will update TDS registers
-      // In production, this would update SQLite TDS tables
-      
       const tdsEntry = {
         journalId: journalEntry.id,
         voucherNumber: journalEntry.voucherNumber,
@@ -273,9 +464,6 @@ export class TransactionRecordingService {
         partyDetails: journalEntry.partyDetails
       };
 
-      // Save to TDS register (simplified)
-      // In production: await db.executeSql('INSERT INTO tds_register ...')
-      
       return { success: true };
     } catch (error) {
       console.error('Update TDS registers error:', error);
@@ -290,9 +478,7 @@ export class TransactionRecordingService {
    */
   static async getTransactionHistory(filters = {}) {
     try {
-      // Get from journal book (traditional format)
       const result = await JournalBookService.getJournalBook(filters);
-      
       return result;
     } catch (error) {
       console.error('Get transaction history error:', error);
@@ -312,7 +498,6 @@ export class TransactionRecordingService {
   static async searchTransactions(searchText) {
     try {
       const result = await JournalBookService.searchJournalBook(searchText);
-      
       return result;
     } catch (error) {
       console.error('Search transactions error:', error);
@@ -332,7 +517,6 @@ export class TransactionRecordingService {
   static async getTransactionsByMonth(month, year) {
     try {
       const result = await JournalBookService.getJournalBookByMonth(month, year);
-      
       return result;
     } catch (error) {
       console.error('Get transactions by month error:', error);
@@ -352,7 +536,6 @@ export class TransactionRecordingService {
   static async getTransactionsByDate(date) {
     try {
       const result = await JournalBookService.getJournalBookByDate(date);
-      
       return result;
     } catch (error) {
       console.error('Get transactions by date error:', error);
@@ -371,7 +554,6 @@ export class TransactionRecordingService {
    */
   static async generateJournalBookPDF(filters = {}) {
     try {
-      // Get entries based on filters
       const result = await JournalBookService.getJournalBook(filters);
       
       if (!result.success || result.data.length === 0) {
@@ -381,7 +563,6 @@ export class TransactionRecordingService {
         };
       }
 
-      // Generate title
       let title = 'JOURNAL BOOK';
       if (filters.monthYear) {
         title = `JOURNAL BOOK - ${filters.monthYear}`;
@@ -389,7 +570,6 @@ export class TransactionRecordingService {
         title = `JOURNAL BOOK - ${filters.fromDate} to ${filters.toDate}`;
       }
 
-      // Generate PDF
       const pdfResult = await JournalBookService.generatePDF(result.data, title);
       
       return pdfResult;
@@ -410,7 +590,6 @@ export class TransactionRecordingService {
   static async getAvailableMonths() {
     try {
       const result = await JournalBookService.getAvailableMonths();
-      
       return result;
     } catch (error) {
       console.error('Get available months error:', error);

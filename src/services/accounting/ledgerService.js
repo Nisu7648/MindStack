@@ -5,27 +5,55 @@
  * 
  * LEDGER = Account-wise record of all transactions
  * 
- * Format: Date | Particulars | Voucher No. | Debit | Credit | Balance
+ * TRADITIONAL DOUBLE-SIDED FORMAT:
+ * ┌─────────────────────────────────────┬─────────────────────────────────────┐
+ * │           DEBIT SIDE                │           CREDIT SIDE               │
+ * ├──────┬──────────┬─────────┬────┬────┼──────┬──────────┬─────────┬────┬────┤
+ * │ Date │ Particulars│Voucher│ LF │ ₹  │ Date │Particulars│Voucher│ LF │ ₹  │
+ * └──────┴──────────┴─────────┴────┴────┴──────┴──────────┴─────────┴────┴────┘
  * 
  * RULES:
  * - Every journal entry is posted to respective ledger accounts
- * - Running balance is maintained (Dr or Cr)
+ * - Debit entries go to DEBIT SIDE
+ * - Credit entries go to CREDIT SIDE
+ * - Balance is calculated: Total Debits - Total Credits
  * - Debit Balance: Assets, Expenses, Losses
  * - Credit Balance: Liabilities, Capital, Income, Gains
- * - Balance = Total Debits - Total Credits
  * 
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import StorageService from '../storage/storageService';
 import moment from 'moment';
 
 export class LedgerService {
-  static LEDGER_KEY = '@mindstack_ledger';
+  /**
+   * ═══════════════════════════════════════════════════════════════════════
+   * HELPER: FORMAT AMOUNT (INDIAN STYLE)
+   * ═══════════════════════════════════════════════════════════════════════
+   */
+  static formatAmount(amount) {
+    if (!amount && amount !== 0) return '0.00';
+    return parseFloat(amount).toLocaleString('en-IN', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
 
   /**
    * ═══════════════════════════════════════════════════════════════════════
-   * POST TO LEDGER - FROM JOURNAL ENTRY
+   * HELPER: FORMAT BALANCE
+   * ═══════════════════════════════════════════════════════════════════════
+   */
+  static formatBalance(amount) {
+    const absAmount = Math.abs(amount);
+    const type = amount >= 0 ? 'Dr' : 'Cr';
+    return `${this.formatAmount(absAmount)} ${type}`;
+  }
+
+  /**
+   * ═══════════════════════════════════════════════════════════════════════
+   * POST TO LEDGER - FROM JOURNAL ENTRY (DOUBLE-SIDED FORMAT)
    * ═══════════════════════════════════════════════════════════════════════
    */
   static async postToLedger(journalEntry) {
@@ -39,8 +67,11 @@ export class LedgerService {
           particulars: this.getParticulars(entry, journalEntry),
           voucherNumber: journalEntry.voucherNumber,
           voucherType: journalEntry.voucherType,
+          ledgerFolio: entry.ledgerFolio || '',
           debit: entry.debit,
           credit: entry.credit,
+          isDebit: entry.debit > 0,
+          isCredit: entry.credit > 0,
           journalId: journalEntry.id
         });
       }
@@ -56,8 +87,8 @@ export class LedgerService {
    * Get particulars for ledger entry
    */
   static getParticulars(entry, journalEntry) {
-    // For debit entry, show credit account
-    // For credit entry, show debit account
+    // For debit entry, show credit account with "To"
+    // For credit entry, show debit account with "By"
     if (entry.debit > 0) {
       // This is debit entry, show "To [Credit Account]"
       const creditEntry = journalEntry.entries.find(e => e.credit > 0);
@@ -70,21 +101,12 @@ export class LedgerService {
   }
 
   /**
-   * Post single ledger entry
+   * ═══════════════════════════════════════════════════════════════════════
+   * POST SINGLE LEDGER ENTRY (DOUBLE-SIDED FORMAT)
+   * ═══════════════════════════════════════════════════════════════════════
    */
   static async postLedgerEntry(data) {
     try {
-      const ledgerKey = `${this.LEDGER_KEY}_${data.accountCode}`;
-      
-      // Get existing ledger
-      const existingData = await AsyncStorage.getItem(ledgerKey);
-      const ledger = existingData ? JSON.parse(existingData) : [];
-
-      // Calculate running balance
-      const previousBalance = ledger.length > 0 ? ledger[0].balanceAmount : 0;
-      const balanceAmount = previousBalance + data.debit - data.credit;
-
-      // Create ledger entry
       const ledgerEntry = {
         id: Date.now().toString(),
         accountCode: data.accountCode,
@@ -94,22 +116,25 @@ export class LedgerService {
         particulars: data.particulars,
         voucherNumber: data.voucherNumber,
         voucherType: data.voucherType,
-        debit: data.debit,
-        credit: data.credit,
-        debitFormatted: data.debit > 0 ? this.formatAmount(data.debit) : '',
-        creditFormatted: data.credit > 0 ? this.formatAmount(data.credit) : '',
-        balanceAmount: balanceAmount,
-        balance: this.formatBalance(balanceAmount),
-        journalId: data.journalId,
-        createdAt: new Date().toISOString()
+        ledgerFolio: data.ledgerFolio || '',
+        
+        // Debit side
+        isDebit: data.isDebit,
+        debitParticulars: data.isDebit ? data.particulars : '',
+        debitAmount: data.debit || 0,
+        
+        // Credit side
+        isCredit: data.isCredit,
+        creditParticulars: data.isCredit ? data.particulars : '',
+        creditAmount: data.credit || 0,
+        
+        // Common
+        debit: data.debit || 0,
+        credit: data.credit || 0,
+        journalId: data.journalId
       };
 
-      // Add to ledger (newest first)
-      ledger.unshift(ledgerEntry);
-
-      // Save ledger
-      await AsyncStorage.setItem(ledgerKey, JSON.stringify(ledger));
-
+      await StorageService.saveToLedger(data.accountCode, ledgerEntry);
       return { success: true, data: ledgerEntry };
     } catch (error) {
       console.error('Post ledger entry error:', error);
@@ -118,97 +143,57 @@ export class LedgerService {
   }
 
   /**
-   * Format amount in Indian style
-   */
-  static formatAmount(amount) {
-    if (!amount || amount === 0) return '';
-    
-    return amount.toLocaleString('en-IN', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-  }
-
-  /**
-   * Format balance with Dr/Cr notation
-   */
-  static formatBalance(amount) {
-    if (amount === 0) return '0.00';
-    
-    const absAmount = Math.abs(amount);
-    const formatted = absAmount.toLocaleString('en-IN', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-    
-    return amount >= 0 ? `${formatted} Dr` : `${formatted} Cr`;
-  }
-
-  /**
    * ═══════════════════════════════════════════════════════════════════════
-   * GET LEDGER ACCOUNT
+   * GET LEDGER ACCOUNT (DOUBLE-SIDED WITH BALANCES)
    * ═══════════════════════════════════════════════════════════════════════
    */
   static async getLedgerAccount(accountCode, filters = {}) {
     try {
-      const ledgerKey = `${this.LEDGER_KEY}_${accountCode}`;
-      const data = await AsyncStorage.getItem(ledgerKey);
-      let ledger = data ? JSON.parse(data) : [];
+      const result = await StorageService.getLedger(accountCode, filters);
+      
+      if (!result.success) return result;
 
-      // Apply filters
-      if (filters.fromDate) {
-        ledger = ledger.filter(e => 
-          moment(e.date).isSameOrAfter(moment(filters.fromDate), 'day')
-        );
-      }
+      let entries = result.data;
+      let runningBalance = 0;
 
-      if (filters.toDate) {
-        ledger = ledger.filter(e => 
-          moment(e.date).isSameOrBefore(moment(filters.toDate), 'day')
-        );
-      }
+      // Calculate running balance
+      entries = entries.map(entry => {
+        runningBalance += entry.debit - entry.credit;
+        
+        return {
+          ...entry,
+          balance: runningBalance,
+          balanceFormatted: this.formatBalance(runningBalance)
+        };
+      });
 
-      if (filters.voucherType) {
-        ledger = ledger.filter(e => e.voucherType === filters.voucherType);
-      }
+      // Separate debit and credit entries
+      const debitEntries = entries.filter(e => e.isDebit);
+      const creditEntries = entries.filter(e => e.isCredit);
 
-      // Calculate summary
-      const summary = this.calculateLedgerSummary(ledger);
+      // Calculate totals
+      const totalDebits = entries.reduce((sum, e) => sum + e.debit, 0);
+      const totalCredits = entries.reduce((sum, e) => sum + e.credit, 0);
+      const closingBalance = totalDebits - totalCredits;
 
       return {
         success: true,
-        data: ledger,
-        summary,
-        accountCode,
-        accountName: ledger.length > 0 ? ledger[0].accountName : ''
+        data: entries,
+        debitEntries: debitEntries,
+        creditEntries: creditEntries,
+        summary: {
+          accountCode: accountCode,
+          accountName: entries.length > 0 ? entries[0].accountName : '',
+          totalDebits: totalDebits,
+          totalCredits: totalCredits,
+          closingBalance: closingBalance,
+          closingBalanceFormatted: this.formatBalance(closingBalance)
+        }
       };
     } catch (error) {
       console.error('Get ledger account error:', error);
-      return {
-        success: false,
-        error: error.message,
-        data: []
-      };
+      return { success: false, error: error.message };
     }
-  }
-
-  /**
-   * Calculate ledger summary
-   */
-  static calculateLedgerSummary(ledger) {
-    const totalDebit = ledger.reduce((sum, e) => sum + e.debit, 0);
-    const totalCredit = ledger.reduce((sum, e) => sum + e.credit, 0);
-    const balance = totalDebit - totalCredit;
-
-    return {
-      totalDebit: this.formatAmount(totalDebit),
-      totalCredit: this.formatAmount(totalCredit),
-      balance: this.formatBalance(balance),
-      totalDebitRaw: totalDebit,
-      totalCreditRaw: totalCredit,
-      balanceRaw: balance,
-      entries: ledger.length
-    };
   }
 
   /**
@@ -216,272 +201,198 @@ export class LedgerService {
    * GET ALL LEDGER ACCOUNTS
    * ═══════════════════════════════════════════════════════════════════════
    */
-  static async getAllLedgerAccounts() {
+  static async getAllLedgerAccounts(filters = {}) {
     try {
-      const allKeys = await AsyncStorage.getAllKeys();
-      const ledgerKeys = allKeys.filter(key => key.startsWith(this.LEDGER_KEY));
+      const result = await StorageService.getAllLedgers(filters);
+      
+      if (!result.success) return result;
 
       const accounts = [];
+      
+      for (const [accountCode, entries] of Object.entries(result.data)) {
+        if (entries.length === 0) continue;
 
-      for (const key of ledgerKeys) {
-        const accountCode = key.replace(`${this.LEDGER_KEY}_`, '');
-        const result = await this.getLedgerAccount(accountCode);
-        
-        if (result.success && result.data.length > 0) {
-          accounts.push({
-            accountCode,
-            accountName: result.accountName,
-            summary: result.summary
-          });
-        }
+        // Calculate totals
+        const totalDebits = entries.reduce((sum, e) => sum + e.debit, 0);
+        const totalCredits = entries.reduce((sum, e) => sum + e.credit, 0);
+        const balance = totalDebits - totalCredits;
+
+        accounts.push({
+          accountCode: accountCode,
+          accountName: entries[0].accountName,
+          totalDebits: totalDebits,
+          totalCredits: totalCredits,
+          balance: balance,
+          balanceFormatted: this.formatBalance(balance),
+          entryCount: entries.length
+        });
       }
 
       return {
         success: true,
         data: accounts,
-        count: accounts.length
+        summary: {
+          totalAccounts: accounts.length,
+          totalDebits: accounts.reduce((sum, a) => sum + a.totalDebits, 0),
+          totalCredits: accounts.reduce((sum, a) => sum + a.totalCredits, 0)
+        }
       };
     } catch (error) {
       console.error('Get all ledger accounts error:', error);
-      return {
-        success: false,
-        error: error.message,
-        data: []
-      };
+      return { success: false, error: error.message };
     }
   }
 
   /**
    * ═══════════════════════════════════════════════════════════════════════
-   * GENERATE LEDGER HTML FOR PDF
+   * GET ACCOUNT BALANCE
    * ═══════════════════════════════════════════════════════════════════════
    */
-  static generateLedgerHTML(accountCode, accountName, ledger, summary, period = '') {
-    const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Ledger - ${accountName}</title>
-  <style>
-    @page { size: A4; margin: 15mm; }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; font-size: 10pt; }
-    
-    .header {
-      text-align: center;
-      margin-bottom: 20px;
-      border-bottom: 2px solid #000;
-      padding-bottom: 10px;
-    }
-    
-    .header h1 { font-size: 18pt; margin-bottom: 5px; }
-    .header .account-name { font-size: 14pt; font-weight: bold; color: #333; }
-    .header .period { font-size: 11pt; color: #666; }
-    
-    .ledger-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-    
-    .ledger-table th {
-      background: #f0f0f0;
-      border: 1px solid #000;
-      padding: 8px 5px;
-      font-weight: bold;
-      text-align: center;
-      font-size: 10pt;
-    }
-    
-    .ledger-table td {
-      border: 1px solid #000;
-      padding: 6px 5px;
-      font-size: 9pt;
-      vertical-align: top;
-    }
-    
-    .ledger-table .date-col { width: 12%; text-align: center; }
-    .ledger-table .particulars-col { width: 35%; text-align: left; }
-    .ledger-table .voucher-col { width: 13%; text-align: center; }
-    .ledger-table .debit-col,
-    .ledger-table .credit-col,
-    .ledger-table .balance-col {
-      width: 13.33%;
-      text-align: right;
-      font-family: 'Courier New', monospace;
-    }
-    
-    .ledger-table .total-row {
-      background: #f9f9f9;
-      font-weight: bold;
-      border-top: 2px solid #000;
-    }
-    
-    .summary {
-      margin-top: 20px;
-      padding: 15px;
-      background: #f5f5f5;
-      border: 1px solid #000;
-    }
-    
-    .summary h3 { font-size: 12pt; margin-bottom: 10px; }
-    .summary-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 5px 0;
-      font-size: 10pt;
-    }
-    
-    .summary-row.balance {
-      font-weight: bold;
-      font-size: 12pt;
-      border-top: 2px solid #000;
-      padding-top: 10px;
-      margin-top: 5px;
-    }
-    
-    .footer {
-      margin-top: 30px;
-      text-align: center;
-      font-size: 9pt;
-      color: #666;
-      border-top: 1px solid #ccc;
-      padding-top: 10px;
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>LEDGER ACCOUNT</h1>
-    <div class="account-name">${accountName} (A/c Code: ${accountCode})</div>
-    ${period ? `<div class="period">${period}</div>` : ''}
-  </div>
-  
-  <table class="ledger-table">
-    <thead>
-      <tr>
-        <th class="date-col">Date</th>
-        <th class="particulars-col">Particulars</th>
-        <th class="voucher-col">Voucher No.</th>
-        <th class="debit-col">Debit (₹)</th>
-        <th class="credit-col">Credit (₹)</th>
-        <th class="balance-col">Balance (₹)</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${this.generateLedgerRows(ledger)}
-      <tr class="total-row">
-        <td colspan="3" style="text-align: right; padding-right: 10px;">
-          <strong>Total:</strong>
-        </td>
-        <td class="debit-col"><strong>${summary.totalDebit}</strong></td>
-        <td class="credit-col"><strong>${summary.totalCredit}</strong></td>
-        <td class="balance-col"><strong>${summary.balance}</strong></td>
-      </tr>
-    </tbody>
-  </table>
-  
-  <div class="summary">
-    <h3>Summary</h3>
-    <div class="summary-row">
-      <span>Total Entries:</span>
-      <span>${summary.entries}</span>
-    </div>
-    <div class="summary-row">
-      <span>Total Debit:</span>
-      <span>₹ ${summary.totalDebit}</span>
-    </div>
-    <div class="summary-row">
-      <span>Total Credit:</span>
-      <span>₹ ${summary.totalCredit}</span>
-    </div>
-    <div class="summary-row balance">
-      <span>Closing Balance:</span>
-      <span>₹ ${summary.balance}</span>
-    </div>
-  </div>
-  
-  <div class="footer">
-    Generated on ${moment().format('DD-MMM-YYYY hh:mm A')} | MindStack Accounting System
-  </div>
-</body>
-</html>
-    `;
-
-    return html;
-  }
-
-  /**
-   * Generate ledger rows HTML
-   */
-  static generateLedgerRows(ledger) {
-    let html = '';
-
-    ledger.forEach(entry => {
-      html += `
-      <tr>
-        <td class="date-col">${entry.dateFormatted}</td>
-        <td class="particulars-col">${entry.particulars}</td>
-        <td class="voucher-col">${entry.voucherNumber}</td>
-        <td class="debit-col">${entry.debitFormatted}</td>
-        <td class="credit-col">${entry.creditFormatted}</td>
-        <td class="balance-col">${entry.balance}</td>
-      </tr>
-      `;
-    });
-
-    return html;
-  }
-
-  /**
-   * ═══════════════════════════════════════════════════════════════════════
-   * GENERATE LEDGER PDF
-   * ═══════════════════════════════════════════════════════════════════════
-   */
-  static async generateLedgerPDF(accountCode, filters = {}) {
+  static async getAccountBalance(accountCode) {
     try {
-      const result = await this.getLedgerAccount(accountCode, filters);
+      const result = await this.getLedgerAccount(accountCode);
       
-      if (!result.success || result.data.length === 0) {
-        return {
-          success: false,
-          error: 'No entries found for this account'
-        };
+      if (!result.success) {
+        return { success: true, balance: 0, balanceFormatted: '0.00 Dr' };
       }
-
-      let period = '';
-      if (filters.fromDate && filters.toDate) {
-        period = `Period: ${moment(filters.fromDate).format('DD-MMM-YYYY')} to ${moment(filters.toDate).format('DD-MMM-YYYY')}`;
-      }
-
-      const html = this.generateLedgerHTML(
-        accountCode,
-        result.accountName,
-        result.data,
-        result.summary,
-        period
-      );
-
-      // Use react-native-print
-      const { RNPrint } = require('react-native-print');
-      
-      const pdfResult = await RNPrint.print({
-        html,
-        fileName: `ledger_${accountCode}_${moment().format('YYYYMMDD_HHmmss')}.pdf`
-      });
 
       return {
         success: true,
-        data: pdfResult,
-        message: 'Ledger PDF generated successfully'
+        balance: result.summary.closingBalance,
+        balanceFormatted: result.summary.closingBalanceFormatted
       };
     } catch (error) {
-      console.error('Generate ledger PDF error:', error);
+      console.error('Get account balance error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * ═══════════════════════════════════════════════════════════════════════
+   * GET TRIAL BALANCE
+   * ═══════════════════════════════════════════════════════════════════════
+   */
+  static async getTrialBalance(filters = {}) {
+    try {
+      const result = await this.getAllLedgerAccounts(filters);
+      
+      if (!result.success) return result;
+
+      const accounts = result.data;
+      
+      // Separate debit and credit balances
+      const debitBalances = accounts.filter(a => a.balance >= 0);
+      const creditBalances = accounts.filter(a => a.balance < 0);
+
+      const totalDebitBalances = debitBalances.reduce((sum, a) => sum + a.balance, 0);
+      const totalCreditBalances = creditBalances.reduce((sum, a) => sum + Math.abs(a.balance), 0);
+
       return {
-        success: false,
-        error: error.message
+        success: true,
+        data: {
+          debitBalances: debitBalances,
+          creditBalances: creditBalances.map(a => ({
+            ...a,
+            balance: Math.abs(a.balance),
+            balanceFormatted: this.formatAmount(Math.abs(a.balance))
+          }))
+        },
+        summary: {
+          totalDebitBalances: totalDebitBalances,
+          totalCreditBalances: totalCreditBalances,
+          difference: Math.abs(totalDebitBalances - totalCreditBalances),
+          isBalanced: Math.abs(totalDebitBalances - totalCreditBalances) < 0.01
+        }
       };
+    } catch (error) {
+      console.error('Get trial balance error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * ═══════════════════════════════════════════════════════════════════════
+   * SEARCH LEDGER ENTRIES
+   * ═══════════════════════════════════════════════════════════════════════
+   */
+  static async searchLedgerEntries(searchTerm, filters = {}) {
+    try {
+      const result = await StorageService.getAllLedgers(filters);
+      
+      if (!result.success) return result;
+
+      const matchingEntries = [];
+      
+      for (const [accountCode, entries] of Object.entries(result.data)) {
+        const filtered = entries.filter(entry => 
+          entry.accountName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          entry.particulars.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          entry.voucherNumber.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        
+        matchingEntries.push(...filtered);
+      }
+
+      return {
+        success: true,
+        data: matchingEntries,
+        count: matchingEntries.length
+      };
+    } catch (error) {
+      console.error('Search ledger entries error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * ═══════════════════════════════════════════════════════════════════════
+   * GET LEDGER SUMMARY
+   * ═══════════════════════════════════════════════════════════════════════
+   */
+  static async getLedgerSummary(filters = {}) {
+    try {
+      const result = await this.getAllLedgerAccounts(filters);
+      
+      if (!result.success) return result;
+
+      const accounts = result.data;
+      
+      // Categorize accounts
+      const assets = accounts.filter(a => a.balance >= 0 && a.accountCode.startsWith('1'));
+      const liabilities = accounts.filter(a => a.balance < 0 && a.accountCode.startsWith('2'));
+      const capital = accounts.filter(a => a.balance < 0 && a.accountCode.startsWith('3'));
+      const income = accounts.filter(a => a.balance < 0 && a.accountCode.startsWith('4'));
+      const expenses = accounts.filter(a => a.balance >= 0 && a.accountCode.startsWith('5'));
+
+      return {
+        success: true,
+        data: {
+          totalAccounts: accounts.length,
+          assets: {
+            count: assets.length,
+            total: assets.reduce((sum, a) => sum + a.balance, 0)
+          },
+          liabilities: {
+            count: liabilities.length,
+            total: liabilities.reduce((sum, a) => sum + Math.abs(a.balance), 0)
+          },
+          capital: {
+            count: capital.length,
+            total: capital.reduce((sum, a) => sum + Math.abs(a.balance), 0)
+          },
+          income: {
+            count: income.length,
+            total: income.reduce((sum, a) => sum + Math.abs(a.balance), 0)
+          },
+          expenses: {
+            count: expenses.length,
+            total: expenses.reduce((sum, a) => sum + a.balance, 0)
+          }
+        }
+      };
+    } catch (error) {
+      console.error('Get ledger summary error:', error);
+      return { success: false, error: error.message };
     }
   }
 }

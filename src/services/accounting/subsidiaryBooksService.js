@@ -8,34 +8,55 @@
  * 2. Sales Book - Credit sales only
  * 3. Purchase Return Book (Debit Note Book) - Goods returned to suppliers
  * 4. Sales Return Book (Credit Note Book) - Goods returned by customers
- * 5. Cash Book - All cash transactions
- * 6. Bank Book - All bank transactions
- * 7. Petty Cash Book - Small expenses (Imprest System)
+ * 5. Cash Book - All cash transactions (DOUBLE-SIDED FORMAT)
+ * 6. Bank Book - All bank transactions (DOUBLE-SIDED FORMAT)
+ * 7. Petty Cash Book - Small expenses (DOUBLE-SIDED FORMAT - Imprest System)
  * 8. Bills Receivable Book - Bills received from debtors
  * 9. Bills Payable Book - Bills given to creditors
  * 
- * All books follow A4 size format with proper columns
+ * YES - All 9 books logic is in this ONE file!
+ * 
+ * DOUBLE-SIDED FORMAT (Cash, Bank, Petty Cash):
+ * ┌─────────────────────────────────────┬─────────────────────────────────────┐
+ * │         DEBIT SIDE (Receipts)       │        CREDIT SIDE (Payments)       │
+ * ├──────┬──────────┬─────────┬────┬────┼──────┬──────────┬─────────┬────┬────┤
+ * │ Date │ Receipts │ Voucher │ LF │ ₹  │ Date │ Payments │ Voucher │ LF │ ₹  │
+ * └──────┴──────────┴─────────┴────┴────┴──────┴──────────┴─────────┴────┴────┘
  * 
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import StorageService from '../storage/storageService';
 import moment from 'moment';
 
 export class SubsidiaryBooksService {
-  static PURCHASE_BOOK_KEY = '@mindstack_purchase_book';
-  static SALES_BOOK_KEY = '@mindstack_sales_book';
-  static PURCHASE_RETURN_KEY = '@mindstack_purchase_return';
-  static SALES_RETURN_KEY = '@mindstack_sales_return';
-  static CASH_BOOK_KEY = '@mindstack_cash_book';
-  static BANK_BOOK_KEY = '@mindstack_bank_book';
-  static PETTY_CASH_KEY = '@mindstack_petty_cash';
-  static BILLS_RECEIVABLE_KEY = '@mindstack_bills_receivable';
-  static BILLS_PAYABLE_KEY = '@mindstack_bills_payable';
+  /**
+   * ═══════════════════════════════════════════════════════════════════════
+   * HELPER: FORMAT AMOUNT (INDIAN STYLE)
+   * ═══════════════════════════════════════════════════════════════════════
+   */
+  static formatAmount(amount) {
+    if (!amount && amount !== 0) return '0.00';
+    return parseFloat(amount).toLocaleString('en-IN', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
 
   /**
    * ═══════════════════════════════════════════════════════════════════════
-   * PURCHASE BOOK - CREDIT PURCHASES ONLY
+   * HELPER: FORMAT BALANCE
+   * ═══════════════════════════════════════════════════════════════════════
+   */
+  static formatBalance(amount) {
+    const absAmount = Math.abs(amount);
+    const type = amount >= 0 ? 'Dr' : 'Cr';
+    return `${this.formatAmount(absAmount)} ${type}`;
+  }
+
+  /**
+   * ═══════════════════════════════════════════════════════════════════════
+   * 1. PURCHASE BOOK - CREDIT PURCHASES ONLY
    * ═══════════════════════════════════════════════════════════════════════
    * 
    * Format: Date | Supplier | Invoice No. | Particulars | Amount | GST | Total
@@ -58,15 +79,11 @@ export class SubsidiaryBooksService {
         igst: data.igst || 0,
         totalGST: (data.cgst || 0) + (data.sgst || 0) + (data.igst || 0),
         total: data.total || data.amount,
-        amountFormatted: this.formatAmount(data.amount),
-        gstFormatted: this.formatAmount((data.cgst || 0) + (data.sgst || 0) + (data.igst || 0)),
-        totalFormatted: this.formatAmount(data.total || data.amount),
         voucherNumber: data.voucherNumber,
         journalId: data.journalId
       };
 
-      await this.saveToBook(this.PURCHASE_BOOK_KEY, entry);
-
+      await StorageService.saveToSubsidiaryBook('purchaseBook', entry);
       return { success: true, data: entry };
     } catch (error) {
       console.error('Record purchase error:', error);
@@ -76,7 +93,7 @@ export class SubsidiaryBooksService {
 
   /**
    * ═══════════════════════════════════════════════════════════════════════
-   * SALES BOOK - CREDIT SALES ONLY
+   * 2. SALES BOOK - CREDIT SALES ONLY
    * ═══════════════════════════════════════════════════════════════════════
    * 
    * Format: Date | Customer | Invoice No. | Particulars | Amount | GST | Total
@@ -99,15 +116,11 @@ export class SubsidiaryBooksService {
         igst: data.igst || 0,
         totalGST: (data.cgst || 0) + (data.sgst || 0) + (data.igst || 0),
         total: data.total || data.amount,
-        amountFormatted: this.formatAmount(data.amount),
-        gstFormatted: this.formatAmount((data.cgst || 0) + (data.sgst || 0) + (data.igst || 0)),
-        totalFormatted: this.formatAmount(data.total || data.amount),
         voucherNumber: data.voucherNumber,
         journalId: data.journalId
       };
 
-      await this.saveToBook(this.SALES_BOOK_KEY, entry);
-
+      await StorageService.saveToSubsidiaryBook('salesBook', entry);
       return { success: true, data: entry };
     } catch (error) {
       console.error('Record sale error:', error);
@@ -117,7 +130,7 @@ export class SubsidiaryBooksService {
 
   /**
    * ═══════════════════════════════════════════════════════════════════════
-   * PURCHASE RETURN BOOK (DEBIT NOTE BOOK)
+   * 3. PURCHASE RETURN BOOK (DEBIT NOTE BOOK)
    * ═══════════════════════════════════════════════════════════════════════
    * 
    * Format: Date | Supplier | Debit Note No. | Particulars | Amount | GST | Total
@@ -131,7 +144,7 @@ export class SubsidiaryBooksService {
         date: data.date || new Date().toISOString(),
         dateFormatted: moment(data.date || new Date()).format('DD-MMM-YYYY'),
         supplierName: data.supplierName,
-        debitNoteNumber: data.debitNoteNumber || data.noteNumber,
+        debitNoteNumber: data.debitNoteNumber || data.invoiceNumber,
         particulars: data.particulars || data.description,
         amount: data.amount,
         gstRate: data.gstRate || 0,
@@ -140,15 +153,11 @@ export class SubsidiaryBooksService {
         igst: data.igst || 0,
         totalGST: (data.cgst || 0) + (data.sgst || 0) + (data.igst || 0),
         total: data.total || data.amount,
-        amountFormatted: this.formatAmount(data.amount),
-        gstFormatted: this.formatAmount((data.cgst || 0) + (data.sgst || 0) + (data.igst || 0)),
-        totalFormatted: this.formatAmount(data.total || data.amount),
         voucherNumber: data.voucherNumber,
         journalId: data.journalId
       };
 
-      await this.saveToBook(this.PURCHASE_RETURN_KEY, entry);
-
+      await StorageService.saveToSubsidiaryBook('purchaseReturnBook', entry);
       return { success: true, data: entry };
     } catch (error) {
       console.error('Record purchase return error:', error);
@@ -158,7 +167,7 @@ export class SubsidiaryBooksService {
 
   /**
    * ═══════════════════════════════════════════════════════════════════════
-   * SALES RETURN BOOK (CREDIT NOTE BOOK)
+   * 4. SALES RETURN BOOK (CREDIT NOTE BOOK)
    * ═══════════════════════════════════════════════════════════════════════
    * 
    * Format: Date | Customer | Credit Note No. | Particulars | Amount | GST | Total
@@ -172,7 +181,7 @@ export class SubsidiaryBooksService {
         date: data.date || new Date().toISOString(),
         dateFormatted: moment(data.date || new Date()).format('DD-MMM-YYYY'),
         customerName: data.customerName,
-        creditNoteNumber: data.creditNoteNumber || data.noteNumber,
+        creditNoteNumber: data.creditNoteNumber || data.invoiceNumber,
         particulars: data.particulars || data.description,
         amount: data.amount,
         gstRate: data.gstRate || 0,
@@ -181,15 +190,11 @@ export class SubsidiaryBooksService {
         igst: data.igst || 0,
         totalGST: (data.cgst || 0) + (data.sgst || 0) + (data.igst || 0),
         total: data.total || data.amount,
-        amountFormatted: this.formatAmount(data.amount),
-        gstFormatted: this.formatAmount((data.cgst || 0) + (data.sgst || 0) + (data.igst || 0)),
-        totalFormatted: this.formatAmount(data.total || data.amount),
         voucherNumber: data.voucherNumber,
         journalId: data.journalId
       };
 
-      await this.saveToBook(this.SALES_RETURN_KEY, entry);
-
+      await StorageService.saveToSubsidiaryBook('salesReturnBook', entry);
       return { success: true, data: entry };
     } catch (error) {
       console.error('Record sales return error:', error);
@@ -199,42 +204,42 @@ export class SubsidiaryBooksService {
 
   /**
    * ═══════════════════════════════════════════════════════════════════════
-   * CASH BOOK - THREE COLUMN FORMAT
+   * 5. CASH BOOK - DOUBLE-SIDED FORMAT
    * ═══════════════════════════════════════════════════════════════════════
    * 
-   * Format: Date | Particulars | Voucher | Cash Debit | Cash Credit | Bank Debit | Bank Credit | Balance
+   * DEBIT SIDE (Receipts):  Date | Receipts | Voucher No. | L.F. | Amount
+   * CREDIT SIDE (Payments): Date | Payments | Voucher No. | L.F. | Amount
    * 
    * ═══════════════════════════════════════════════════════════════════════
    */
   static async recordCashTransaction(data) {
     try {
-      const existingData = await AsyncStorage.getItem(this.CASH_BOOK_KEY);
-      const cashBook = existingData ? JSON.parse(existingData) : [];
-
-      // Calculate running balance
-      const previousBalance = cashBook.length > 0 ? cashBook[0].balanceAmount : 0;
-      const cashDebit = data.cashDebit || 0;
-      const cashCredit = data.cashCredit || 0;
-      const balanceAmount = previousBalance + cashDebit - cashCredit;
-
       const entry = {
         id: Date.now().toString(),
         date: data.date || new Date().toISOString(),
         dateFormatted: moment(data.date || new Date()).format('DD-MMM-YYYY'),
+        
+        // Transaction details
         particulars: data.particulars,
         voucherNumber: data.voucherNumber,
-        cashDebit: cashDebit,
-        cashCredit: cashCredit,
-        cashDebitFormatted: cashDebit > 0 ? this.formatAmount(cashDebit) : '',
-        cashCreditFormatted: cashCredit > 0 ? this.formatAmount(cashCredit) : '',
-        balanceAmount: balanceAmount,
-        balance: this.formatBalance(balanceAmount),
+        ledgerFolio: data.ledgerFolio || '',
+        
+        // Debit side (Receipts)
+        isReceipt: data.isReceipt || false,
+        receiptParticulars: data.isReceipt ? data.particulars : '',
+        receiptAmount: data.isReceipt ? data.amount : 0,
+        
+        // Credit side (Payments)
+        isPayment: data.isPayment || false,
+        paymentParticulars: data.isPayment ? data.particulars : '',
+        paymentAmount: data.isPayment ? data.amount : 0,
+        
+        // Common
+        amount: data.amount,
         journalId: data.journalId
       };
 
-      cashBook.unshift(entry);
-      await AsyncStorage.setItem(this.CASH_BOOK_KEY, JSON.stringify(cashBook));
-
+      await StorageService.saveToSubsidiaryBook('cashBook', entry);
       return { success: true, data: entry };
     } catch (error) {
       console.error('Record cash transaction error:', error);
@@ -244,42 +249,42 @@ export class SubsidiaryBooksService {
 
   /**
    * ═══════════════════════════════════════════════════════════════════════
-   * BANK BOOK
+   * 6. BANK BOOK - DOUBLE-SIDED FORMAT
    * ═══════════════════════════════════════════════════════════════════════
    * 
-   * Format: Date | Particulars | Voucher | Debit | Credit | Balance
+   * DEBIT SIDE (Receipts):  Date | Receipts | Voucher No. | L.F. | Amount
+   * CREDIT SIDE (Payments): Date | Payments | Voucher No. | L.F. | Amount
    * 
    * ═══════════════════════════════════════════════════════════════════════
    */
   static async recordBankTransaction(data) {
     try {
-      const existingData = await AsyncStorage.getItem(this.BANK_BOOK_KEY);
-      const bankBook = existingData ? JSON.parse(existingData) : [];
-
-      // Calculate running balance
-      const previousBalance = bankBook.length > 0 ? bankBook[0].balanceAmount : 0;
-      const debit = data.debit || 0;
-      const credit = data.credit || 0;
-      const balanceAmount = previousBalance + debit - credit;
-
       const entry = {
         id: Date.now().toString(),
         date: data.date || new Date().toISOString(),
         dateFormatted: moment(data.date || new Date()).format('DD-MMM-YYYY'),
+        
+        // Transaction details
         particulars: data.particulars,
         voucherNumber: data.voucherNumber,
-        debit: debit,
-        credit: credit,
-        debitFormatted: debit > 0 ? this.formatAmount(debit) : '',
-        creditFormatted: credit > 0 ? this.formatAmount(credit) : '',
-        balanceAmount: balanceAmount,
-        balance: this.formatBalance(balanceAmount),
+        ledgerFolio: data.ledgerFolio || '',
+        
+        // Debit side (Receipts)
+        isReceipt: data.isReceipt || false,
+        receiptParticulars: data.isReceipt ? data.particulars : '',
+        receiptAmount: data.isReceipt ? data.amount : 0,
+        
+        // Credit side (Payments)
+        isPayment: data.isPayment || false,
+        paymentParticulars: data.isPayment ? data.particulars : '',
+        paymentAmount: data.isPayment ? data.amount : 0,
+        
+        // Common
+        amount: data.amount,
         journalId: data.journalId
       };
 
-      bankBook.unshift(entry);
-      await AsyncStorage.setItem(this.BANK_BOOK_KEY, JSON.stringify(bankBook));
-
+      await StorageService.saveToSubsidiaryBook('bankBook', entry);
       return { success: true, data: entry };
     } catch (error) {
       console.error('Record bank transaction error:', error);
@@ -289,10 +294,11 @@ export class SubsidiaryBooksService {
 
   /**
    * ═══════════════════════════════════════════════════════════════════════
-   * PETTY CASH BOOK - IMPREST SYSTEM
+   * 7. PETTY CASH BOOK - DOUBLE-SIDED FORMAT (IMPREST SYSTEM)
    * ═══════════════════════════════════════════════════════════════════════
    * 
-   * Format: Date | Particulars | Voucher | Receipt | Payment | Balance
+   * DEBIT SIDE (Receipts):  Date | Receipts | Voucher No. | L.F. | Amount
+   * CREDIT SIDE (Payments): Date | Payments | Voucher No. | L.F. | Amount
    * 
    * Imprest System: Fixed amount maintained, replenished periodically
    * 
@@ -300,37 +306,35 @@ export class SubsidiaryBooksService {
    */
   static async recordPettyCash(data) {
     try {
-      const existingData = await AsyncStorage.getItem(this.PETTY_CASH_KEY);
-      const pettyCash = existingData ? JSON.parse(existingData) : [];
-
-      // Get imprest amount (fixed amount)
-      const imprestAmount = data.imprestAmount || 10000; // Default ₹10,000
-
-      // Calculate running balance
-      const previousBalance = pettyCash.length > 0 ? pettyCash[0].balanceAmount : imprestAmount;
-      const receipt = data.receipt || 0;
-      const payment = data.payment || 0;
-      const balanceAmount = previousBalance + receipt - payment;
-
       const entry = {
         id: Date.now().toString(),
         date: data.date || new Date().toISOString(),
         dateFormatted: moment(data.date || new Date()).format('DD-MMM-YYYY'),
+        
+        // Transaction details
         particulars: data.particulars,
         voucherNumber: data.voucherNumber,
-        receipt: receipt,
-        payment: payment,
-        receiptFormatted: receipt > 0 ? this.formatAmount(receipt) : '',
-        paymentFormatted: payment > 0 ? this.formatAmount(payment) : '',
-        balanceAmount: balanceAmount,
-        balance: this.formatAmount(balanceAmount),
-        imprestAmount: imprestAmount,
+        ledgerFolio: data.ledgerFolio || '',
+        
+        // Debit side (Receipts - Imprest received)
+        isReceipt: data.isReceipt || false,
+        receiptParticulars: data.isReceipt ? data.particulars : '',
+        receiptAmount: data.isReceipt ? data.amount : 0,
+        
+        // Credit side (Payments - Expenses)
+        isPayment: data.isPayment || false,
+        paymentParticulars: data.isPayment ? data.particulars : '',
+        paymentAmount: data.isPayment ? data.amount : 0,
+        
+        // Imprest details
+        imprestAmount: data.imprestAmount || 10000, // Default ₹10,000
+        
+        // Common
+        amount: data.amount,
         journalId: data.journalId
       };
 
-      pettyCash.unshift(entry);
-      await AsyncStorage.setItem(this.PETTY_CASH_KEY, JSON.stringify(pettyCash));
-
+      await StorageService.saveToSubsidiaryBook('pettyCashBook', entry);
       return { success: true, data: entry };
     } catch (error) {
       console.error('Record petty cash error:', error);
@@ -340,7 +344,7 @@ export class SubsidiaryBooksService {
 
   /**
    * ═══════════════════════════════════════════════════════════════════════
-   * BILLS RECEIVABLE BOOK
+   * 8. BILLS RECEIVABLE BOOK
    * ═══════════════════════════════════════════════════════════════════════
    * 
    * Format: Date | From (Drawer) | Bill No. | Term (Days) | Due Date | Amount
@@ -349,26 +353,26 @@ export class SubsidiaryBooksService {
    */
   static async recordBillReceivable(data) {
     try {
-      const dueDate = moment(data.date).add(data.termDays || 90, 'days');
+      const billDate = moment(data.date || new Date());
+      const termDays = data.termDays || 90;
+      const dueDate = billDate.clone().add(termDays, 'days');
 
       const entry = {
         id: Date.now().toString(),
         date: data.date || new Date().toISOString(),
-        dateFormatted: moment(data.date || new Date()).format('DD-MMM-YYYY'),
+        dateFormatted: billDate.format('DD-MMM-YYYY'),
         drawerName: data.drawerName || data.customerName,
         billNumber: data.billNumber,
-        termDays: data.termDays || 90,
+        termDays: termDays,
         dueDate: dueDate.toISOString(),
         dueDateFormatted: dueDate.format('DD-MMM-YYYY'),
         amount: data.amount,
-        amountFormatted: this.formatAmount(data.amount),
-        status: 'PENDING', // PENDING, RECEIVED, DISHONORED
+        status: 'PENDING', // PENDING, RECEIVED, DISHONOURED
         voucherNumber: data.voucherNumber,
         journalId: data.journalId
       };
 
-      await this.saveToBook(this.BILLS_RECEIVABLE_KEY, entry);
-
+      await StorageService.saveToSubsidiaryBook('billsReceivableBook', entry);
       return { success: true, data: entry };
     } catch (error) {
       console.error('Record bill receivable error:', error);
@@ -378,7 +382,7 @@ export class SubsidiaryBooksService {
 
   /**
    * ═══════════════════════════════════════════════════════════════════════
-   * BILLS PAYABLE BOOK
+   * 9. BILLS PAYABLE BOOK
    * ═══════════════════════════════════════════════════════════════════════
    * 
    * Format: Date | To (Payee) | Bill No. | Term (Days) | Due Date | Amount
@@ -387,26 +391,26 @@ export class SubsidiaryBooksService {
    */
   static async recordBillPayable(data) {
     try {
-      const dueDate = moment(data.date).add(data.termDays || 90, 'days');
+      const billDate = moment(data.date || new Date());
+      const termDays = data.termDays || 90;
+      const dueDate = billDate.clone().add(termDays, 'days');
 
       const entry = {
         id: Date.now().toString(),
         date: data.date || new Date().toISOString(),
-        dateFormatted: moment(data.date || new Date()).format('DD-MMM-YYYY'),
+        dateFormatted: billDate.format('DD-MMM-YYYY'),
         payeeName: data.payeeName || data.supplierName,
         billNumber: data.billNumber,
-        termDays: data.termDays || 90,
+        termDays: termDays,
         dueDate: dueDate.toISOString(),
         dueDateFormatted: dueDate.format('DD-MMM-YYYY'),
         amount: data.amount,
-        amountFormatted: this.formatAmount(data.amount),
-        status: 'PENDING', // PENDING, PAID, DISHONORED
+        status: 'PENDING', // PENDING, PAID, DISHONOURED
         voucherNumber: data.voucherNumber,
         journalId: data.journalId
       };
 
-      await this.saveToBook(this.BILLS_PAYABLE_KEY, entry);
-
+      await StorageService.saveToSubsidiaryBook('billsPayableBook', entry);
       return { success: true, data: entry };
     } catch (error) {
       console.error('Record bill payable error:', error);
@@ -416,132 +420,145 @@ export class SubsidiaryBooksService {
 
   /**
    * ═══════════════════════════════════════════════════════════════════════
-   * HELPER METHODS
+   * GET BOOK ENTRIES
    * ═══════════════════════════════════════════════════════════════════════
    */
-
-  static async saveToBook(bookKey, entry) {
-    try {
-      const existingData = await AsyncStorage.getItem(bookKey);
-      const book = existingData ? JSON.parse(existingData) : [];
-
-      book.unshift(entry);
-
-      await AsyncStorage.setItem(bookKey, JSON.stringify(book));
-
-      return { success: true };
-    } catch (error) {
-      console.error('Save to book error:', error);
-      throw error;
-    }
-  }
-
-  static formatAmount(amount) {
-    if (!amount || amount === 0) return '';
-    
-    return amount.toLocaleString('en-IN', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-  }
-
-  static formatBalance(amount) {
-    if (amount === 0) return '0.00';
-    
-    const absAmount = Math.abs(amount);
-    const formatted = absAmount.toLocaleString('en-IN', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-    
-    return amount >= 0 ? `${formatted} Dr` : `${formatted} Cr`;
+  static async getBookEntries(bookName, filters = {}) {
+    return await StorageService.getSubsidiaryBook(bookName, filters);
   }
 
   /**
    * ═══════════════════════════════════════════════════════════════════════
-   * GET BOOK ENTRIES
+   * GET CASH BOOK WITH BALANCES (DOUBLE-SIDED)
    * ═══════════════════════════════════════════════════════════════════════
    */
-  static async getBook(bookKey, filters = {}) {
+  static async getCashBookWithBalances(filters = {}) {
     try {
-      const data = await AsyncStorage.getItem(bookKey);
-      let entries = data ? JSON.parse(data) : [];
+      const result = await StorageService.getSubsidiaryBook('cashBook', filters);
+      
+      if (!result.success) return result;
 
-      // Apply filters
-      if (filters.fromDate) {
-        entries = entries.filter(e => 
-          moment(e.date).isSameOrAfter(moment(filters.fromDate), 'day')
-        );
-      }
+      let entries = result.data;
+      let runningBalance = 0;
 
-      if (filters.toDate) {
-        entries = entries.filter(e => 
-          moment(e.date).isSameOrBefore(moment(filters.toDate), 'day')
-        );
-      }
-
-      if (filters.month) {
-        entries = entries.filter(e => 
-          moment(e.date).format('MMMM') === filters.month
-        );
-      }
-
-      if (filters.year) {
-        entries = entries.filter(e => 
-          moment(e.date).format('YYYY') === filters.year
-        );
-      }
+      // Calculate running balance
+      entries = entries.map(entry => {
+        if (entry.isReceipt) {
+          runningBalance += entry.receiptAmount;
+        } else if (entry.isPayment) {
+          runningBalance -= entry.paymentAmount;
+        }
+        
+        return {
+          ...entry,
+          balance: runningBalance,
+          balanceFormatted: this.formatAmount(runningBalance)
+        };
+      });
 
       return {
         success: true,
         data: entries,
-        count: entries.length
+        summary: {
+          totalReceipts: entries.filter(e => e.isReceipt).reduce((sum, e) => sum + e.receiptAmount, 0),
+          totalPayments: entries.filter(e => e.isPayment).reduce((sum, e) => sum + e.paymentAmount, 0),
+          closingBalance: runningBalance
+        }
       };
     } catch (error) {
-      console.error('Get book error:', error);
-      return {
-        success: false,
-        error: error.message,
-        data: []
-      };
+      console.error('Get cash book with balances error:', error);
+      return { success: false, error: error.message };
     }
   }
 
-  // Specific getters for each book
-  static async getPurchaseBook(filters = {}) {
-    return await this.getBook(this.PURCHASE_BOOK_KEY, filters);
+  /**
+   * ═══════════════════════════════════════════════════════════════════════
+   * GET BANK BOOK WITH BALANCES (DOUBLE-SIDED)
+   * ═══════════════════════════════════════════════════════════════════════
+   */
+  static async getBankBookWithBalances(filters = {}) {
+    try {
+      const result = await StorageService.getSubsidiaryBook('bankBook', filters);
+      
+      if (!result.success) return result;
+
+      let entries = result.data;
+      let runningBalance = 0;
+
+      // Calculate running balance
+      entries = entries.map(entry => {
+        if (entry.isReceipt) {
+          runningBalance += entry.receiptAmount;
+        } else if (entry.isPayment) {
+          runningBalance -= entry.paymentAmount;
+        }
+        
+        return {
+          ...entry,
+          balance: runningBalance,
+          balanceFormatted: this.formatAmount(runningBalance)
+        };
+      });
+
+      return {
+        success: true,
+        data: entries,
+        summary: {
+          totalReceipts: entries.filter(e => e.isReceipt).reduce((sum, e) => sum + e.receiptAmount, 0),
+          totalPayments: entries.filter(e => e.isPayment).reduce((sum, e) => sum + e.paymentAmount, 0),
+          closingBalance: runningBalance
+        }
+      };
+    } catch (error) {
+      console.error('Get bank book with balances error:', error);
+      return { success: false, error: error.message };
+    }
   }
 
-  static async getSalesBook(filters = {}) {
-    return await this.getBook(this.SALES_BOOK_KEY, filters);
-  }
+  /**
+   * ═══════════════════════════════════════════════════════════════════════
+   * GET PETTY CASH BOOK WITH BALANCES (DOUBLE-SIDED)
+   * ═══════════════════════════════════════════════════════════════════════
+   */
+  static async getPettyCashBookWithBalances(filters = {}) {
+    try {
+      const result = await StorageService.getSubsidiaryBook('pettyCashBook', filters);
+      
+      if (!result.success) return result;
 
-  static async getPurchaseReturnBook(filters = {}) {
-    return await this.getBook(this.PURCHASE_RETURN_KEY, filters);
-  }
+      let entries = result.data;
+      const imprestAmount = entries.length > 0 ? entries[0].imprestAmount : 10000;
+      let runningBalance = imprestAmount;
 
-  static async getSalesReturnBook(filters = {}) {
-    return await this.getBook(this.SALES_RETURN_KEY, filters);
-  }
+      // Calculate running balance
+      entries = entries.map(entry => {
+        if (entry.isReceipt) {
+          runningBalance += entry.receiptAmount;
+        } else if (entry.isPayment) {
+          runningBalance -= entry.paymentAmount;
+        }
+        
+        return {
+          ...entry,
+          balance: runningBalance,
+          balanceFormatted: this.formatAmount(runningBalance)
+        };
+      });
 
-  static async getCashBook(filters = {}) {
-    return await this.getBook(this.CASH_BOOK_KEY, filters);
-  }
-
-  static async getBankBook(filters = {}) {
-    return await this.getBook(this.BANK_BOOK_KEY, filters);
-  }
-
-  static async getPettyCashBook(filters = {}) {
-    return await this.getBook(this.PETTY_CASH_KEY, filters);
-  }
-
-  static async getBillsReceivableBook(filters = {}) {
-    return await this.getBook(this.BILLS_RECEIVABLE_KEY, filters);
-  }
-
-  static async getBillsPayableBook(filters = {}) {
-    return await this.getBook(this.BILLS_PAYABLE_KEY, filters);
+      return {
+        success: true,
+        data: entries,
+        summary: {
+          imprestAmount: imprestAmount,
+          totalReceipts: entries.filter(e => e.isReceipt).reduce((sum, e) => sum + e.receiptAmount, 0),
+          totalPayments: entries.filter(e => e.isPayment).reduce((sum, e) => sum + e.paymentAmount, 0),
+          closingBalance: runningBalance
+        }
+      };
+    } catch (error) {
+      console.error('Get petty cash book with balances error:', error);
+      return { success: false, error: error.message };
+    }
   }
 }
 

@@ -3,13 +3,13 @@
  * DOUBLE-SIDED BOOK PDF GENERATOR
  * ═══════════════════════════════════════════════════════════════════════════
  * 
- * Generates PDFs for Cash Book, Bank Book, and Petty Cash Book in traditional
- * double-sided format:
+ * Generates PDFs for Ledger, Cash Book, Bank Book, and Petty Cash Book in 
+ * traditional double-sided format:
  * 
  * ┌─────────────────────────────────────┬─────────────────────────────────────┐
- * │         DEBIT SIDE (Receipts)       │        CREDIT SIDE (Payments)       │
+ * │           DEBIT SIDE                │           CREDIT SIDE               │
  * ├──────┬──────────┬─────────┬────┬────┼──────┬──────────┬─────────┬────┬────┤
- * │ Date │ Receipts │ Voucher │ LF │ ₹  │ Date │ Payments │ Voucher │ LF │ ₹  │
+ * │ Date │Particulars│Voucher│ LF │ ₹  │ Date │Particulars│Voucher│ LF │ ₹  │
  * └──────┴──────────┴─────────┴────┴────┴──────┴──────────┴─────────┴────┴────┘
  * 
  * ═══════════════════════════════════════════════════════════════════════════
@@ -18,6 +18,132 @@
 import PDFGenerationService from './pdfGenerationService';
 
 export class DoubleSidedBookPDFService {
+  /**
+   * ═══════════════════════════════════════════════════════════════════════
+   * GENERATE LEDGER ACCOUNT PDF (DOUBLE-SIDED)
+   * ═══════════════════════════════════════════════════════════════════════
+   */
+  static async generateLedgerAccountPDF(accountData, period) {
+    try {
+      const companyDetails = await PDFGenerationService.getCompanyDetails();
+      
+      const { debitEntries, creditEntries, summary } = accountData;
+      
+      // Calculate totals
+      const totalDebits = summary.totalDebits;
+      const totalCredits = summary.totalCredits;
+      const balance = summary.closingBalance;
+
+      // Generate rows (pair debit and credit entries by index)
+      const maxRows = Math.max(debitEntries.length, creditEntries.length);
+      let tableRows = '';
+
+      for (let i = 0; i < maxRows; i++) {
+        const debitEntry = debitEntries[i];
+        const creditEntry = creditEntries[i];
+
+        tableRows += `
+          <tr>
+            ${debitEntry ? `
+              <td class="text-center">${PDFGenerationService.formatDate(debitEntry.date)}</td>
+              <td>${debitEntry.debitParticulars}</td>
+              <td class="text-center">${debitEntry.voucherNumber}</td>
+              <td class="text-center">${debitEntry.ledgerFolio || ''}</td>
+              <td class="text-right">${PDFGenerationService.formatIndianCurrency(debitEntry.debitAmount)}</td>
+            ` : `
+              <td colspan="5"></td>
+            `}
+            ${creditEntry ? `
+              <td class="text-center">${PDFGenerationService.formatDate(creditEntry.date)}</td>
+              <td>${creditEntry.creditParticulars}</td>
+              <td class="text-center">${creditEntry.voucherNumber}</td>
+              <td class="text-center">${creditEntry.ledgerFolio || ''}</td>
+              <td class="text-right">${PDFGenerationService.formatIndianCurrency(creditEntry.creditAmount)}</td>
+            ` : `
+              <td colspan="5"></td>
+            `}
+          </tr>
+        `;
+      }
+
+      // Add totals row
+      tableRows += `
+        <tr style="font-weight: bold; background-color: #f0f0f0;">
+          <td colspan="4" class="text-right">Total:</td>
+          <td class="text-right">${PDFGenerationService.formatIndianCurrency(totalDebits)}</td>
+          <td colspan="4" class="text-right">Total:</td>
+          <td class="text-right">${PDFGenerationService.formatIndianCurrency(totalCredits)}</td>
+        </tr>
+      `;
+
+      // Add balance row
+      if (balance > 0) {
+        tableRows += `
+          <tr style="font-weight: bold; background-color: #e8f5e9;">
+            <td colspan="4" class="text-right"></td>
+            <td class="text-right"></td>
+            <td colspan="4" class="text-right">Balance c/d:</td>
+            <td class="text-right">${PDFGenerationService.formatIndianCurrency(balance)}</td>
+          </tr>
+        `;
+      } else if (balance < 0) {
+        tableRows += `
+          <tr style="font-weight: bold; background-color: #ffebee;">
+            <td colspan="4" class="text-right">Balance c/d:</td>
+            <td class="text-right">${PDFGenerationService.formatIndianCurrency(Math.abs(balance))}</td>
+            <td colspan="4" class="text-right"></td>
+            <td class="text-right"></td>
+          </tr>
+        `;
+      }
+
+      const content = `
+        ${PDFGenerationService.generateCompanyHeader(companyDetails, `LEDGER - ${summary.accountName}`, period)}
+        <div style="margin-bottom: 10px; padding: 10px; background-color: #e3f2fd; border: 1px solid #2196F3;">
+          <p style="margin: 0;"><strong>Account Code:</strong> ${summary.accountCode}</p>
+          <p style="margin: 0;"><strong>Account Name:</strong> ${summary.accountName}</p>
+        </div>
+        <table>
+          <thead>
+            <tr style="background-color: #2196F3; color: white;">
+              <th colspan="5" class="text-center">DEBIT SIDE</th>
+              <th colspan="5" class="text-center">CREDIT SIDE</th>
+            </tr>
+            <tr>
+              <th style="width: 8%;">Date</th>
+              <th style="width: 17%;">Particulars</th>
+              <th style="width: 8%;">Voucher</th>
+              <th style="width: 5%;">L.F.</th>
+              <th style="width: 12%;">Amount (₹)</th>
+              <th style="width: 8%;">Date</th>
+              <th style="width: 17%;">Particulars</th>
+              <th style="width: 8%;">Voucher</th>
+              <th style="width: 5%;">L.F.</th>
+              <th style="width: 12%;">Amount (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+        <div class="summary">
+          <p><strong>Summary:</strong></p>
+          <p>Total Debits: ₹${PDFGenerationService.formatIndianCurrency(totalDebits)}</p>
+          <p>Total Credits: ₹${PDFGenerationService.formatIndianCurrency(totalCredits)}</p>
+          <p>Closing Balance: ₹${PDFGenerationService.formatIndianCurrency(Math.abs(balance))} ${balance >= 0 ? 'Dr' : 'Cr'}</p>
+        </div>
+      `;
+
+      const html = PDFGenerationService.generateBaseHTML(content);
+      const fileName = `Ledger_${summary.accountName.replace(/\s+/g, '_')}_${period.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
+
+      return await PDFGenerationService.generatePDFFromHTML(html, fileName);
+    } catch (error) {
+      console.error('Generate ledger account PDF error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
   /**
    * ═══════════════════════════════════════════════════════════════════════
    * GENERATE CASH BOOK PDF (DOUBLE-SIDED)

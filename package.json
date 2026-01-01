@@ -58,6 +58,7 @@
     "react-native-fs": "^2.20.0",
     "react-native-share": "^10.0.0",
     "react-native-print": "^0.11.0",
+    "react-native-html-to-pdf": "^0.12.0",
     "moment": "^2.29.4",
     "lodash": "^4.17.21"
   },
@@ -90,6 +91,9 @@
     "noExternalAPIs": true,
     "offlineOCR": true,
     "localFirst": true,
-    "completeSolution": true
+    "completeSolution": true,
+    "phoneStorage": true,
+    "pdfGeneration": true,
+    "backupRestore": true
   }
 }

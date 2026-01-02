@@ -3,9 +3,9 @@
 [![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)](https://github.com/Nisu7648/MindStack)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 [![React Native](https://img.shields.io/badge/React%20Native-0.72-blue)](https://reactnative.dev/)
-[![Code](https://img.shields.io/badge/Code-5000%2B%20Lines-success)](AUTONOMOUS_IMPLEMENTATION.md)
+[![Code](https://img.shields.io/badge/Code-8000%2B%20Lines-success)](AUTONOMOUS_IMPLEMENTATION.md)
 
-**The world's first autonomous accounting system** that runs accounting in the background while you focus on selling. **ZERO accounting knowledge required.**
+**The world's first self-healing, self-explaining autonomous accounting system** that runs accounting in the background while you focus on selling. **ZERO accounting knowledge required.**
 
 ---
 
@@ -17,7 +17,9 @@ MindStack is NOT a bookkeeping app. It's an **autonomous accounting operating sy
 - ✅ **Auto-reconciles** 85% of bank transactions (zero-click matching)
 - ✅ **Auto-calculates** profit in real-time (every sale, every item)
 - ✅ **Auto-tracks** cash discipline (daily confirmation + 7-day forecast)
-- ✅ **Zero accounting jargon** (Money In/Out, not Debit/Credit)
+- ✅ **Auto-posts** tax per transaction (country-aware, no manual work)
+- ✅ **Self-heals** errors (duplicates, classifications, patterns)
+- ✅ **Explains** finances in plain language (not accounting jargon)
 
 **You sell. We handle the accounting. Automatically.**
 
@@ -30,9 +32,9 @@ MindStack is NOT a bookkeeping app. It's an **autonomous accounting operating sy
 |---------|------|-----------|
 | Transaction Entry | Manual | **90% Automated** |
 | Bank Reconciliation | Manual matching | **85% Auto-matched** |
-| Inventory-Accounting | Separate | **Tightly Coupled** |
-| Cash Management | Basic | **Daily Discipline + Forecast** |
-| User Interface | Accounting terms | **Plain Language** |
+| Tax Posting | Manual | **Auto per transaction** |
+| Error Correction | Manual | **Self-healing** |
+| Financial View | Accounting terms | **Plain language + explanations** |
 | Profit Tracking | End of period | **Real-time per item** |
 
 ### vs Tally:
@@ -40,8 +42,9 @@ MindStack is NOT a bookkeeping app. It's an **autonomous accounting operating sy
 |---------|-------|-----------|
 | Learning Curve | Steep | **Zero (Plain Language)** |
 | Transaction Entry | Manual vouchers | **Auto-capture** |
+| Tax Readiness | Manual check | **Continuous tracking** |
+| Error Fixing | Manual | **Self-healing** |
 | Mobile | Limited | **Full Mobile App** |
-| Offline | Desktop only | **Offline-first** |
 | Automation | None | **90% Automated** |
 
 ---
@@ -57,19 +60,6 @@ MindStack is NOT a bookkeeping app. It's an **autonomous accounting operating sy
 4. **Text Input** - "Paid rent 15000 cash" → Auto-creates expense
 5. **Bill Upload** - Photo of bill → OCR + Auto-records
 
-**Example:**
-```
-User makes a ₹10,000 sale in POS
-↓
-System automatically creates:
-✓ Sales entry
-✓ Inventory reduction (FIFO)
-✓ GST entries (CGST/SGST/IGST)
-✓ Customer balance update
-✓ Cash/Bank entry
-✓ Profit calculation (₹3,500 profit)
-```
-
 ### 2. **Auto-Reconciliation (85% Match Rate)**
 
 #### 4 Matching Algorithms:
@@ -77,19 +67,6 @@ System automatically creates:
 2. **Fuzzy Match** (85-95%) - Close amount (±1%)
 3. **Reference Match** (95%) - Cheque/ref number
 4. **Pattern Match** (80-90%) - AI description matching
-
-**Example:**
-```
-Upload bank statement with 100 transactions
-↓
-System auto-matches 85 transactions
-↓
-Flags 15 for review with AI suggestions
-↓
-User clicks "Accept" on suggestions
-↓
-Done! 100% reconciled in 2 minutes
-```
 
 ### 3. **Inventory-Accounting Coupling**
 
@@ -99,18 +76,6 @@ Every stock movement affects your P&L:
 - ✅ Dead stock → Cost highlighted
 - ✅ Over-purchasing → Alerts triggered
 
-**Example:**
-```
-Sell 10 units of Product A
-↓
-System automatically:
-✓ Reduces inventory (FIFO layers)
-✓ Calculates COGS: ₹6,000
-✓ Records revenue: ₹10,000
-✓ Calculates profit: ₹4,000 (40% margin)
-✓ Updates all accounting entries
-```
-
 ### 4. **Cash Discipline (Prevents Leakage)**
 
 Daily cash tracking:
@@ -119,62 +84,102 @@ Daily cash tracking:
 - ✅ Shortage/surplus detection
 - ✅ Pattern analysis
 - ✅ 7-day cash forecast
-- ✅ Low cash warnings
+
+### 5. **Tax Autopilot** 🆕
+
+Country-aware tax automation:
+- ✅ Auto-calculates tax per transaction (GST/VAT/Sales Tax)
+- ✅ Auto-posts tax entries (no manual work)
+- ✅ Continuous readiness tracking (0-100 score)
+- ✅ Identifies issues before filing
+- ✅ Multi-country support (India, US, UK, Australia)
 
 **Example:**
 ```
-System: "Expected cash: ₹25,000"
-User counts: ₹24,500
-↓
-System detects ₹500 shortage
-↓
-Auto-creates adjustment entry
-↓
-Tracks pattern over 30 days
-↓
-Alerts: "Average shortage: ₹300/day"
+Tax Readiness Score: 85/100 (Grade B)
+✅ Ready to File
+
+Issues Found:
+⚠️ 3 Missing Invoices
+⚠️ 1 Wrong Tax Calculation
+
+Recommendations:
+🔴 CRITICAL: Fix wrong tax (₹500 impact)
+🟡 HIGH: Generate 3 missing invoices
+```
+
+### 6. **Self-Healing System** 🆕
+
+Automatically fixes errors:
+- ✅ Removes duplicate entries
+- ✅ Corrects minor classifications
+- ✅ Learns from user corrections
+- ✅ Only escalates high-impact issues
+
+**Example:**
+```
+Auto-Fixed:
+✓ Removed 2 duplicate entries
+✓ Reclassified 5 expenses (pattern-based)
+✓ Applied learned pattern to 10 transactions
+
+Needs Review:
+⚠️ High-value unreconciled (₹50,000)
+⚠️ Tax discrepancy (₹500)
+```
+
+### 7. **Human-Language Financial View** 🆕
+
+Plain language + intelligent explanations:
+- 💰 **You Earned** (not "Credit to Sales")
+- 💸 **You Spent** (not "Debit to Expense")
+- 📤 **You Owe** (not "Accounts Payable")
+- 📥 **You Will Receive** (not "Accounts Receivable")
+- 💎 **Real Profit** with factor analysis
+
+**Example:**
+```
+Real Profit: ₹70,000 (28% margin)
+↑ ₹5,000 more than last month
+
+What affected your profit:
+✅ Sales increased → +₹15,000
+   You sold more products
+
+❌ Purchase costs increased → -₹20,000
+   Raw materials became expensive
+
+✅ Better margins on services → +₹9,000
+   Service income had higher profit margin
 ```
 
 ---
 
 ## 📱 USER INTERFACE (ZERO ACCOUNTING JARGON)
 
-### 1. **Money Flow Screen**
-Shows business in plain language:
-- 💰 **Money In** - All money that came in
-- 💸 **Money Out** - All money that went out
-- 📤 **What I Owe** - Money to pay vendors
-- 📥 **What I'm Owed** - Money customers owe you
-- 💎 **Real Profit** - Money In - Money Out
+### 1. **Financial Insights** 🆕
+Shows your money story in plain language with intelligent explanations
 
-**NO "Debit/Credit", NO "Assets/Liabilities"**
+### 2. **Tax Readiness** 🆕
+Continuous compliance tracking with actionable recommendations
 
-### 2. **POS Quick Bill**
-Fast retail billing:
-- Scan/select products
-- Real-time profit display
-- Multiple payment modes
-- Auto-creates ALL accounting entries
+### 3. **Money Flow Screen**
+Simple view: Money In, Money Out, What I Owe, What I'm Owed
 
-### 3. **Auto-Reconciliation**
-Zero-click bank matching:
-- Upload statement
-- 85% auto-matched
-- AI suggestions for rest
-- One-click acceptance
+### 4. **POS Quick Bill**
+Fast retail billing with real-time profit display
 
-### 4. **Cash Discipline**
-Daily cash tracking:
-- Expected vs Actual
-- Shortage alerts
-- 7-day forecast
-- Pattern analysis
+### 5. **Auto-Reconciliation**
+Zero-click bank matching with AI suggestions
+
+### 6. **Cash Discipline**
+Daily cash tracking with shortage alerts
 
 ---
 
 ## 🏗️ TECHNICAL ARCHITECTURE
 
-### Core Engines (2100+ lines):
+### Core Engines (3700+ lines):
 1. **TransactionCaptureEngine** (600 lines)
    - Auto-captures from 5 sources
    - Natural language processing
@@ -190,13 +195,25 @@ Daily cash tracking:
    - Real-time COGS calculation
    - Profit tracking per item
 
-### User Screens (2900+ lines):
+4. **TaxAutopilotEngine** (800 lines) 🆕
+   - Country-aware tax calculation
+   - Auto-posting per transaction
+   - Continuous readiness tracking
+
+5. **AutonomousCorrectionEngine** (800 lines) 🆕
+   - Self-healing error correction
+   - Pattern learning
+   - Smart escalation
+
+### User Screens (4300+ lines):
 1. **POSQuickBillScreen** (800 lines)
 2. **MoneyFlowScreen** (700 lines)
 3. **AutoReconciliationScreen** (800 lines)
 4. **CashDisciplineScreen** (600 lines)
+5. **TaxReadinessScreen** (700 lines) 🆕
+6. **FinancialInsightsScreen** (700 lines) 🆕
 
-**Total: 5000+ lines of production code**
+**Total: 8000+ lines of production code**
 
 ---
 
@@ -209,6 +226,32 @@ Daily cash tracking:
 - ✅ TDS calculation (all sections)
 - ✅ Complete audit trail
 - ✅ 7 accounting books auto-generated
+
+### 💰 **Tax Autopilot** 🆕
+- ✅ Country-aware tax rules (India, US, UK, Australia)
+- ✅ Auto-calculates per transaction
+- ✅ Auto-posts tax entries
+- ✅ Continuous readiness tracking (0-100 score)
+- ✅ Identifies missing invoices
+- ✅ Detects wrong tax calculations
+- ✅ Tracks unmatched ITC
+- ✅ Monitors filing status
+
+### 🔧 **Self-Healing** 🆕
+- ✅ Auto-removes duplicates
+- ✅ Auto-corrects classifications
+- ✅ Learns from user corrections
+- ✅ Pattern-based auto-fixes
+- ✅ Smart escalation (only high-impact)
+- ✅ Complete correction audit trail
+
+### 💡 **Human-Language View** 🆕
+- ✅ Plain language financial view
+- ✅ Intelligent explanations
+- ✅ Factor-based profit analysis
+- ✅ Trend analysis with reasons
+- ✅ Urgent payment alerts
+- ✅ Cash position forecast
 
 ### 🏪 **POS & Billing**
 - ✅ Fast retail billing
@@ -233,22 +276,6 @@ Daily cash tracking:
 - ✅ 7-day cash forecast
 - ✅ Pattern analysis
 - ✅ Low cash alerts
-
-### 👥 **Master Data**
-- ✅ Customer management
-- ✅ Vendor management
-- ✅ Product catalog
-- ✅ GST & PAN validation
-- ✅ Credit limit tracking
-- ✅ Outstanding balances
-
-### 📊 **Reports (Plain Language)**
-- ✅ Money In/Out summary
-- ✅ What I Owe/Owed
-- ✅ Real Profit calculation
-- ✅ Cash flow forecast
-- ✅ Inventory valuation
-- ✅ All 7 accounting books
 
 ---
 
@@ -278,12 +305,13 @@ For detailed setup, see [QUICK_START.md](QUICK_START.md)
 ### Essential Guides:
 - 📘 [**Quick Start**](QUICK_START.md) - Get started in 5 minutes
 - 📗 [**Setup Guide**](SETUP_GUIDE.md) - Detailed installation
-- 📕 [**Autonomous Implementation**](AUTONOMOUS_IMPLEMENTATION.md) - Complete technical docs
+- 📕 [**Autonomous Implementation**](AUTONOMOUS_IMPLEMENTATION.md) - Core features (5000 lines)
+- 📙 [**Advanced Modules**](ADVANCED_MODULES.md) - Tax, Self-Healing, Insights (3000 lines) 🆕
 
 ### Technical Documentation:
-- 📙 [**Implementation Guide**](IMPLEMENTATION.md) - All features documented
-- 📓 [**Indian Compliance**](INDIAN_ACCOUNTING_COMPLIANCE.md) - GST, TDS, standards
-- 📔 [**Journal System**](JOURNAL_SYSTEM_GUIDE.md) - Natural language accounting
+- 📓 [**Implementation Guide**](IMPLEMENTATION.md) - All features documented
+- 📔 [**Indian Compliance**](INDIAN_ACCOUNTING_COMPLIANCE.md) - GST, TDS, standards
+- 📒 [**Journal System**](JOURNAL_SYSTEM_GUIDE.md) - Natural language accounting
 
 ---
 
@@ -299,7 +327,7 @@ For detailed setup, see [QUICK_START.md](QUICK_START.md)
 - Hates accounting
 - Wants automated bookkeeping
 - Needs real-time profit visibility
-- Requires GST compliance
+- Requires tax compliance
 - Values cash discipline
 
 ---
@@ -309,43 +337,32 @@ For detailed setup, see [QUICK_START.md](QUICK_START.md)
 ### **Automation First**
 - 90% of bookkeeping automated
 - 85% of reconciliation automated
-- 80% of classification automated
+- 80% of error correction automated
 - Human approval only when necessary
 
 ### **Zero Accounting Knowledge**
 - Plain language interface
 - No "Debit/Credit" terminology
-- No accounting jargon
+- Intelligent explanations
 - Simple money concepts
+
+### **Self-Healing**
+- Auto-fixes duplicates
+- Auto-corrects classifications
+- Learns from corrections
+- Only escalates high-impact issues
+
+### **Tax Autopilot**
+- Auto-calculates per transaction
+- Continuous readiness tracking
+- No filing-time panic
+- Multi-country support
 
 ### **Real-Time Intelligence**
 - Profit calculated per transaction
 - Cash forecast 7 days ahead
 - Dead stock identified instantly
 - Shortage patterns tracked
-
-### **Complete Compliance**
-- Indian Accounting Standards
-- GST Act provisions
-- TDS calculations
-- Complete audit trail
-
-### **Offline-First**
-- Works without internet
-- Local SQLite database
-- No external APIs
-- Complete privacy
-
----
-
-## 🛠️ TECHNOLOGY STACK
-
-- **Frontend:** React Native 0.72
-- **Database:** SQLite (local storage)
-- **AI/ML:** TensorFlow.js
-- **OCR:** Tesseract.js (offline)
-- **Voice:** @react-native-voice/voice
-- **Testing:** Jest
 
 ---
 
@@ -355,31 +372,42 @@ For detailed setup, see [QUICK_START.md](QUICK_START.md)
 MindStack/
 ├── src/
 │   ├── services/
-│   │   ├── autonomous/           # 🆕 Autonomous engines (2100+ lines)
-│   │   │   ├── TransactionCaptureEngine.js
-│   │   │   ├── BankIntelligenceEngine.js
-│   │   │   └── InventoryAccountingEngine.js
+│   │   ├── autonomous/           # Autonomous engines (3700+ lines)
+│   │   │   ├── TransactionCaptureEngine.js (600 lines)
+│   │   │   ├── BankIntelligenceEngine.js (700 lines)
+│   │   │   ├── InventoryAccountingEngine.js (800 lines)
+│   │   │   └── AutonomousCorrectionEngine.js (800 lines) 🆕
+│   │   │
+│   │   ├── tax/                  # Tax services (800+ lines)
+│   │   │   └── TaxAutopilotEngine.js (800 lines) 🆕
+│   │   │
 │   │   ├── accounting/           # Accounting services
-│   │   ├── tax/                  # GST, TDS calculators
 │   │   └── database/             # SQLite schema
 │   │
 │   ├── screens/
-│   │   ├── autonomous/           # 🆕 Autonomous screens (2100+ lines)
+│   │   ├── pos/                  # POS screens (800+ lines)
+│   │   │   └── POSQuickBillScreen.js
+│   │   │
+│   │   ├── autonomous/           # Autonomous screens (2100+ lines)
 │   │   │   ├── MoneyFlowScreen.js
 │   │   │   ├── AutoReconciliationScreen.js
 │   │   │   └── CashDisciplineScreen.js
-│   │   ├── pos/                  # 🆕 POS screens (800+ lines)
-│   │   │   └── POSQuickBillScreen.js
+│   │   │
+│   │   ├── tax/                  # Tax screens (700+ lines) 🆕
+│   │   │   └── TaxReadinessScreen.js
+│   │   │
+│   │   ├── insights/             # Insights screens (700+ lines) 🆕
+│   │   │   └── FinancialInsightsScreen.js
+│   │   │
 │   │   ├── auth/                 # Authentication
 │   │   ├── books/                # Accounting books
 │   │   └── transactions/         # Transaction management
 │   │
 │   └── components/               # Reusable components
 │
-├── AUTONOMOUS_IMPLEMENTATION.md  # 🆕 Complete technical docs
+├── AUTONOMOUS_IMPLEMENTATION.md  # Core features (5000 lines)
+├── ADVANCED_MODULES.md           # Advanced features (3000 lines) 🆕
 ├── README.md                     # This file
-├── QUICK_START.md
-├── IMPLEMENTATION.md
 └── [other docs...]
 ```
 
@@ -389,35 +417,38 @@ MindStack/
 
 - ✅ **Authentication System** - 100% Complete
 - ✅ **Business Setup** - 100% Complete
-- ✅ **Transaction Auto-Capture** - 100% Complete 🆕
-- ✅ **Bank Auto-Reconciliation** - 100% Complete 🆕
-- ✅ **Inventory-Accounting Coupling** - 100% Complete 🆕
-- ✅ **Cash Discipline System** - 100% Complete 🆕
-- ✅ **POS Quick Bill** - 100% Complete 🆕
-- ✅ **Money Flow Interface** - 100% Complete 🆕
+- ✅ **Transaction Auto-Capture** - 100% Complete
+- ✅ **Bank Auto-Reconciliation** - 100% Complete
+- ✅ **Inventory-Accounting Coupling** - 100% Complete
+- ✅ **Cash Discipline System** - 100% Complete
+- ✅ **POS Quick Bill** - 100% Complete
+- ✅ **Money Flow Interface** - 100% Complete
+- ✅ **Tax Autopilot** - 100% Complete 🆕
+- ✅ **Self-Healing System** - 100% Complete 🆕
+- ✅ **Financial Insights** - 100% Complete 🆕
 - ✅ **Accounting Books** - 100% Complete
 - ✅ **GST & TDS** - 100% Complete
 
-**Total Code:** 5000+ lines of production-ready autonomous accounting code
+**Total Code:** 8000+ lines of production-ready autonomous accounting code
 
 ---
 
 ## 🎉 WHAT MAKES THIS SPECIAL
 
-### 1. **Truly Autonomous**
-Not just "automated" - it's **autonomous**. The system makes intelligent decisions without human intervention.
+### 1. **First Self-Healing Accounting System**
+No other accounting software automatically fixes errors. MindStack does.
 
-### 2. **Zero Learning Curve**
-No accounting knowledge required. If you can count money, you can use MindStack.
+### 2. **First Human-Language Financial View**
+Wave shows numbers. Tally shows reports. MindStack EXPLAINS what they mean.
 
-### 3. **Inventory-Accounting Fusion**
-First system to tightly couple inventory with accounting. Every stock movement affects P&L.
+### 3. **First Tax Autopilot**
+Other systems require manual tax posting. MindStack does it automatically per transaction.
 
-### 4. **Cash Discipline**
-Prevents the #1 reason Indian SMBs fail - cash leakage.
+### 4. **First Pattern Learning System**
+Other systems don't learn. MindStack learns from every correction and applies it everywhere.
 
-### 5. **Real-Time Intelligence**
-Not end-of-month reports. Real-time profit, real-time alerts, real-time decisions.
+### 5. **Truly Autonomous**
+Not just "automated" - it's **autonomous**. Makes intelligent decisions without human intervention.
 
 ---
 
@@ -446,9 +477,9 @@ If you find MindStack useful, please ⭐ star this repository!
 
 ---
 
-**Built with ❤️ for Indian businesses**
+**Built with ❤️ for businesses that want accounting to run itself**
 
-*"You sell. We handle the accounting. Automatically."*
+*"The world's first self-healing, self-explaining accounting system."*
 
 ---
 

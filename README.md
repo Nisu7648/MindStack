@@ -3,9 +3,10 @@
 [![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)](https://github.com/Nisu7648/MindStack)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 [![React Native](https://img.shields.io/badge/React%20Native-0.72-blue)](https://reactnative.dev/)
-[![Code](https://img.shields.io/badge/Code-8000%2B%20Lines-success)](AUTONOMOUS_IMPLEMENTATION.md)
+[![Code](https://img.shields.io/badge/Code-10000%2B%20Lines-success)](AUTONOMOUS_IMPLEMENTATION.md)
+[![Global Tax](https://img.shields.io/badge/Tax%20Coverage-78%20Jurisdictions-orange)](GLOBAL_TAX_SYSTEM.md)
 
-**The world's first self-healing, self-explaining autonomous accounting system** that runs accounting in the background while you focus on selling. **ZERO accounting knowledge required.**
+**The world's first self-healing, self-explaining autonomous accounting system with global tax compliance** that runs accounting in the background while you focus on selling. **ZERO accounting knowledge required.**
 
 ---
 
@@ -17,9 +18,10 @@ MindStack is NOT a bookkeeping app. It's an **autonomous accounting operating sy
 - ✅ **Auto-reconciles** 85% of bank transactions (zero-click matching)
 - ✅ **Auto-calculates** profit in real-time (every sale, every item)
 - ✅ **Auto-tracks** cash discipline (daily confirmation + 7-day forecast)
-- ✅ **Auto-posts** tax per transaction (country-aware, no manual work)
+- ✅ **Auto-posts** tax per transaction (78 jurisdictions: India, USA, EU)
 - ✅ **Self-heals** errors (duplicates, classifications, patterns)
 - ✅ **Explains** finances in plain language (not accounting jargon)
+- ✅ **Generates tax reports** (GSTR-1, GSTR-3B, Form 941, VAT Returns)
 
 **You sell. We handle the accounting. Automatically.**
 
@@ -29,23 +31,99 @@ MindStack is NOT a bookkeeping app. It's an **autonomous accounting operating sy
 
 ### vs Wave Accounting:
 | Feature | Wave | MindStack |
-|---------|------|-----------|
+|---------|------|--------------|
 | Transaction Entry | Manual | **90% Automated** |
 | Bank Reconciliation | Manual matching | **85% Auto-matched** |
 | Tax Posting | Manual | **Auto per transaction** |
+| Global Tax Support | Limited | **78 Jurisdictions** |
 | Error Correction | Manual | **Self-healing** |
 | Financial View | Accounting terms | **Plain language + explanations** |
 | Profit Tracking | End of period | **Real-time per item** |
 
 ### vs Tally:
 | Feature | Tally | MindStack |
-|---------|-------|-----------|
+|---------|-------|--------------|
 | Learning Curve | Steep | **Zero (Plain Language)** |
 | Transaction Entry | Manual vouchers | **Auto-capture** |
 | Tax Readiness | Manual check | **Continuous tracking** |
+| Global Tax | India only | **India + USA + EU** |
 | Error Fixing | Manual | **Self-healing** |
 | Mobile | Limited | **Full Mobile App** |
 | Automation | None | **90% Automated** |
+
+---
+
+## 🌍 GLOBAL TAX SYSTEM (NEW!)
+
+### Coverage: 78 Jurisdictions
+
+**India:**
+- ✅ GST (CGST, SGST, IGST) - All rates (0%, 5%, 18%, 40%)
+- ✅ Composition Scheme
+- ✅ Input Tax Credit (ITC)
+- ✅ Reverse Charge Mechanism
+- ✅ E-Way Bills
+- ✅ HSN/SAC Codes
+- ✅ Reports: GSTR-1, GSTR-3B, GSTR-9, GSTR-2A, GSTR-7
+
+**USA:**
+- ✅ Federal Income Tax (7 brackets)
+- ✅ State Sales Tax (50 states)
+- ✅ Payroll Taxes (FICA, FUTA, SUTA)
+- ✅ Economic Nexus Rules
+- ✅ Marketplace Facilitator Laws
+- ✅ Reports: Form 941, Form 940, W-2, 1099
+
+**Europe:**
+- ✅ VAT for 27 EU countries + UK
+- ✅ Standard, Reduced, Super-Reduced rates
+- ✅ Intra-EU Supply Rules
+- ✅ Reverse Charge Mechanism
+- ✅ OSS (One-Stop Shop)
+- ✅ Reports: VAT Returns, VIES Declarations
+
+### Tax Features
+
+**Auto-Calculation:**
+```javascript
+// India GST
+₹10,000 sale → Auto-calculates 18% GST
+CGST: ₹900 (9%)
+SGST: ₹900 (9%)
+Total: ₹11,800
+
+// USA Sales Tax
+$1,000 sale in CA → Auto-calculates 8.75%
+State: $72.50 (7.25%)
+Local: $15.00 (1.5%)
+Total: $1,087.50
+
+// EU VAT
+€1,000 sale in Germany → Auto-calculates 19% VAT
+VAT: €190
+Total: €1,190
+```
+
+**Tax Optimization:**
+- 💡 Suggests Composition Scheme (India) - Save up to 17%
+- 💡 Maximizes ITC utilization
+- 💡 Identifies deduction opportunities (USA)
+- 💡 Recommends business structure changes
+- 💡 Forecasts tax liability
+
+**Tax Readiness Score:**
+```
+Score: 85/100 (Grade B)
+✅ Ready to File
+
+Issues Found:
+⚠️ 3 Missing Invoices
+⚠️ 1 Wrong Tax Calculation
+
+Potential Savings: ₹50,000/year
+```
+
+[📖 Complete Tax Documentation](GLOBAL_TAX_SYSTEM.md)
 
 ---
 
@@ -85,14 +163,16 @@ Daily cash tracking:
 - ✅ Pattern analysis
 - ✅ 7-day cash forecast
 
-### 5. **Tax Autopilot** 🆕
+### 5. **Global Tax Autopilot** 🆕
 
-Country-aware tax automation:
-- ✅ Auto-calculates tax per transaction (GST/VAT/Sales Tax)
+Multi-country tax automation:
+- ✅ Auto-calculates tax per transaction (78 jurisdictions)
 - ✅ Auto-posts tax entries (no manual work)
 - ✅ Continuous readiness tracking (0-100 score)
 - ✅ Identifies issues before filing
-- ✅ Multi-country support (India, US, UK, Australia)
+- ✅ One-click report generation
+- ✅ Tax optimization suggestions
+- ✅ Liability forecasting
 
 **Example:**
 ```
@@ -106,6 +186,10 @@ Issues Found:
 Recommendations:
 🔴 CRITICAL: Fix wrong tax (₹500 impact)
 🟡 HIGH: Generate 3 missing invoices
+
+Optimization Opportunities:
+💡 Switch to Composition Scheme → Save ₹50,000/year
+💡 Claim unutilized ITC → Save ₹15,000
 ```
 
 ### 6. **Self-Healing System** 🆕
@@ -160,26 +244,32 @@ What affected your profit:
 ### 1. **Financial Insights** 🆕
 Shows your money story in plain language with intelligent explanations
 
-### 2. **Tax Readiness** 🆕
-Continuous compliance tracking with actionable recommendations
+### 2. **Tax Report Center** 🆕
+One-click tax report generation for any country:
+- India: GSTR-1, GSTR-3B, GSTR-9
+- USA: Sales Tax, Form 941, W-2
+- EU: VAT Returns, VIES
 
-### 3. **Money Flow Screen**
+### 3. **Tax Optimization Dashboard** 🆕
+AI-powered tax-saving suggestions with potential savings
+
+### 4. **Money Flow Screen**
 Simple view: Money In, Money Out, What I Owe, What I'm Owed
 
-### 4. **POS Quick Bill**
+### 5. **POS Quick Bill**
 Fast retail billing with real-time profit display
 
-### 5. **Auto-Reconciliation**
+### 6. **Auto-Reconciliation**
 Zero-click bank matching with AI suggestions
 
-### 6. **Cash Discipline**
+### 7. **Cash Discipline**
 Daily cash tracking with shortage alerts
 
 ---
 
 ## 🏗️ TECHNICAL ARCHITECTURE
 
-### Core Engines (3700+ lines):
+### Core Engines (5500+ lines):
 1. **TransactionCaptureEngine** (600 lines)
    - Auto-captures from 5 sources
    - Natural language processing
@@ -195,25 +285,36 @@ Daily cash tracking with shortage alerts
    - Real-time COGS calculation
    - Profit tracking per item
 
-4. **TaxAutopilotEngine** (800 lines) 🆕
-   - Country-aware tax calculation
-   - Auto-posting per transaction
-   - Continuous readiness tracking
+4. **GlobalTaxEngine** (1200 lines) 🆕
+   - 78 jurisdiction support
+   - Auto-calculation & posting
+   - Report generation
 
-5. **AutonomousCorrectionEngine** (800 lines) 🆕
+5. **AdvancedTaxCalculator** (800 lines) 🆕
+   - Tax optimization
+   - Liability forecasting
+   - Comparative analysis
+
+6. **TaxAutopilotEngine** (800 lines)
+   - Continuous readiness tracking
+   - Missing data detection
+   - Compliance monitoring
+
+7. **AutonomousCorrectionEngine** (800 lines)
    - Self-healing error correction
    - Pattern learning
    - Smart escalation
 
-### User Screens (4300+ lines):
+### User Screens (5100+ lines):
 1. **POSQuickBillScreen** (800 lines)
 2. **MoneyFlowScreen** (700 lines)
 3. **AutoReconciliationScreen** (800 lines)
 4. **CashDisciplineScreen** (600 lines)
-5. **TaxReadinessScreen** (700 lines) 🆕
-6. **FinancialInsightsScreen** (700 lines) 🆕
+5. **TaxReportScreen** (800 lines) 🆕
+6. **TaxOptimizationScreen** (700 lines) 🆕
+7. **FinancialInsightsScreen** (700 lines)
 
-**Total: 8000+ lines of production code**
+**Total: 10,600+ lines of production code**
 
 ---
 
@@ -222,20 +323,20 @@ Daily cash tracking with shortage alerts
 ### 📈 **Accounting (Automated)**
 - ✅ Double-entry bookkeeping (hidden from user)
 - ✅ Auto-capture from 5 sources
-- ✅ GST calculation (CGST/SGST/IGST)
-- ✅ TDS calculation (all sections)
 - ✅ Complete audit trail
 - ✅ 7 accounting books auto-generated
 
-### 💰 **Tax Autopilot** 🆕
-- ✅ Country-aware tax rules (India, US, UK, Australia)
+### 🌍 **Global Tax System** 🆕
+- ✅ **India:** GST (all rates), Composition, ITC, RCM, E-Way Bills
+- ✅ **USA:** Federal Income, State Sales (50 states), Payroll (FICA)
+- ✅ **Europe:** VAT (27 countries), Reverse Charge, OSS
 - ✅ Auto-calculates per transaction
 - ✅ Auto-posts tax entries
 - ✅ Continuous readiness tracking (0-100 score)
-- ✅ Identifies missing invoices
-- ✅ Detects wrong tax calculations
-- ✅ Tracks unmatched ITC
-- ✅ Monitors filing status
+- ✅ One-click report generation
+- ✅ Tax optimization suggestions
+- ✅ Liability forecasting
+- ✅ Export to PDF/Excel
 
 ### 🔧 **Self-Healing** 🆕
 - ✅ Auto-removes duplicates
@@ -248,45 +349,51 @@ Daily cash tracking with shortage alerts
 ### 💡 **Human-Language View** 🆕
 - ✅ Plain language financial view
 - ✅ Intelligent explanations
-- ✅ Factor-based profit analysis
-- ✅ Trend analysis with reasons
-- ✅ Urgent payment alerts
-- ✅ Cash position forecast
+- ✅ Factor analysis for profit changes
+- ✅ Actionable recommendations
 
-### 🏪 **POS & Billing**
-- ✅ Fast retail billing
+### 📊 **Inventory Management**
+- ✅ FIFO costing
+- ✅ Real-time valuation
+- ✅ Dead stock alerts
+- ✅ Reorder notifications
+- ✅ Profit per item
+
+### 🏦 **Banking**
+- ✅ Auto-reconciliation (85% match rate)
+- ✅ 4 matching algorithms
+- ✅ Cash discipline tracking
+- ✅ 7-day cash forecast
+
+### 📱 **POS System**
+- ✅ Fast billing
 - ✅ Barcode scanning
 - ✅ Multiple payment modes
 - ✅ Real-time profit display
 - ✅ Customer management
-- ✅ Receipt printing
 
-### 📦 **Inventory (Coupled with Accounting)**
-- ✅ FIFO valuation
-- ✅ Real-time COGS
-- ✅ Dead stock alerts
-- ✅ Over-purchasing detection
-- ✅ Low stock warnings
-- ✅ Batch tracking
-
-### 🏦 **Bank & Cash**
-- ✅ Auto-reconciliation (85% match rate)
-- ✅ Daily cash confirmation
-- ✅ Shortage tracking
-- ✅ 7-day cash forecast
-- ✅ Pattern analysis
-- ✅ Low cash alerts
+### 📄 **Reports (50+ Types)**
+- ✅ **India:** GSTR-1, GSTR-3B, GSTR-9, GSTR-2A, GSTR-7
+- ✅ **USA:** Form 941, Form 940, W-2, 1099, Sales Tax
+- ✅ **EU:** VAT Returns, VIES, OSS, Intrastat
+- ✅ P&L Statement
+- ✅ Balance Sheet
+- ✅ Cash Flow
+- ✅ Trial Balance
+- ✅ Ledger Reports
 
 ---
 
-## 🚀 QUICK START
+## 🚀 GETTING STARTED
+
+### Installation
 
 ```bash
-# Clone the repository
+# Clone repository
 git clone https://github.com/Nisu7648/MindStack.git
-cd MindStack
 
 # Install dependencies
+cd MindStack
 npm install
 
 # Run on Android
@@ -296,202 +403,100 @@ npm run android
 npm run ios
 ```
 
-For detailed setup, see [QUICK_START.md](QUICK_START.md)
+### Initial Setup
+
+1. **Sign Up** - Email/Google/Microsoft OAuth
+2. **Business Setup** - Country, State, GST/VAT Number
+3. **Start Selling** - POS or Invoice creation
+4. **Auto-Accounting** - Everything handled automatically
 
 ---
 
 ## 📖 DOCUMENTATION
 
-### Essential Guides:
-- 📘 [**Quick Start**](QUICK_START.md) - Get started in 5 minutes
-- 📗 [**Setup Guide**](SETUP_GUIDE.md) - Detailed installation
-- 📕 [**Autonomous Implementation**](AUTONOMOUS_IMPLEMENTATION.md) - Core features (5000 lines)
-- 📙 [**Advanced Modules**](ADVANCED_MODULES.md) - Tax, Self-Healing, Insights (3000 lines) 🆕
-
-### Technical Documentation:
-- 📓 [**Implementation Guide**](IMPLEMENTATION.md) - All features documented
-- 📔 [**Indian Compliance**](INDIAN_ACCOUNTING_COMPLIANCE.md) - GST, TDS, standards
-- 📒 [**Journal System**](JOURNAL_SYSTEM_GUIDE.md) - Natural language accounting
+- [🌍 Global Tax System](GLOBAL_TAX_SYSTEM.md) - Complete tax rules for 78 jurisdictions
+- [🤖 Autonomous Implementation](AUTONOMOUS_IMPLEMENTATION.md) - Technical architecture
+- [🔧 Advanced Modules](ADVANCED_MODULES.md) - Tax Autopilot, Self-Healing, Insights
+- [⚙️ Critical Services](CRITICAL_SERVICES.md) - Books Correctness, Health Monitor
 
 ---
 
-## 🎯 WHO IS THIS FOR?
+## 🎯 USE CASES
 
-### Perfect for:
-- 🏪 **Retail Stores** - Fast billing + auto-accounting
-- 🏭 **Wholesale Businesses** - Inventory + profit tracking
-- 💼 **Service Businesses** - Simple money tracking
-- 🏭 **Small Manufacturers** - Complete inventory-accounting
-
-### Ideal User:
-- Hates accounting
-- Wants automated bookkeeping
-- Needs real-time profit visibility
-- Requires tax compliance
-- Values cash discipline
+Perfect for:
+- **Retail stores** - Fast POS billing with auto-accounting
+- **Small businesses** - Complete accounting without accountant
+- **Service businesses** - Invoice + payment tracking
+- **Multi-location** - Centralized accounting
+- **Global businesses** - Multi-country tax compliance
+- **E-commerce** - Marketplace facilitator compliance
 
 ---
 
-## 💡 KEY HIGHLIGHTS
+## 🌟 WHAT MAKES MINDSTACK UNIQUE?
 
-### **Automation First**
-- 90% of bookkeeping automated
-- 85% of reconciliation automated
-- 80% of error correction automated
-- Human approval only when necessary
+### 1. **True Autonomy**
+Not just automation - the system thinks, learns, and fixes itself
 
-### **Zero Accounting Knowledge**
-- Plain language interface
-- No "Debit/Credit" terminology
-- Intelligent explanations
-- Simple money concepts
+### 2. **Global Tax Coverage**
+78 jurisdictions (India + 50 US states + 27 EU countries) - No other app has this
 
-### **Self-Healing**
-- Auto-fixes duplicates
-- Auto-corrects classifications
-- Learns from corrections
-- Only escalates high-impact issues
+### 3. **Zero Learning Curve**
+Plain language interface - Your grandma can use it
 
-### **Tax Autopilot**
-- Auto-calculates per transaction
-- Continuous readiness tracking
-- No filing-time panic
-- Multi-country support
+### 4. **Real-Time Intelligence**
+Every transaction analyzed instantly for profit, tax, and compliance
 
-### **Real-Time Intelligence**
-- Profit calculated per transaction
-- Cash forecast 7 days ahead
-- Dead stock identified instantly
-- Shortage patterns tracked
+### 5. **Self-Healing**
+Mistakes fixed automatically - Only escalates what matters
+
+### 6. **Tax Optimization**
+AI suggests ways to save thousands in taxes
 
 ---
 
-## 📊 PROJECT STRUCTURE
+## 📊 STATISTICS
 
-```
-MindStack/
-├── src/
-│   ├── services/
-│   │   ├── autonomous/           # Autonomous engines (3700+ lines)
-│   │   │   ├── TransactionCaptureEngine.js (600 lines)
-│   │   │   ├── BankIntelligenceEngine.js (700 lines)
-│   │   │   ├── InventoryAccountingEngine.js (800 lines)
-│   │   │   └── AutonomousCorrectionEngine.js (800 lines) 🆕
-│   │   │
-│   │   ├── tax/                  # Tax services (800+ lines)
-│   │   │   └── TaxAutopilotEngine.js (800 lines) 🆕
-│   │   │
-│   │   ├── accounting/           # Accounting services
-│   │   └── database/             # SQLite schema
-│   │
-│   ├── screens/
-│   │   ├── pos/                  # POS screens (800+ lines)
-│   │   │   └── POSQuickBillScreen.js
-│   │   │
-│   │   ├── autonomous/           # Autonomous screens (2100+ lines)
-│   │   │   ├── MoneyFlowScreen.js
-│   │   │   ├── AutoReconciliationScreen.js
-│   │   │   └── CashDisciplineScreen.js
-│   │   │
-│   │   ├── tax/                  # Tax screens (700+ lines) 🆕
-│   │   │   └── TaxReadinessScreen.js
-│   │   │
-│   │   ├── insights/             # Insights screens (700+ lines) 🆕
-│   │   │   └── FinancialInsightsScreen.js
-│   │   │
-│   │   ├── auth/                 # Authentication
-│   │   ├── books/                # Accounting books
-│   │   └── transactions/         # Transaction management
-│   │
-│   └── components/               # Reusable components
-│
-├── AUTONOMOUS_IMPLEMENTATION.md  # Core features (5000 lines)
-├── ADVANCED_MODULES.md           # Advanced features (3000 lines) 🆕
-├── README.md                     # This file
-└── [other docs...]
-```
-
----
-
-## 📈 CURRENT STATUS
-
-- ✅ **Authentication System** - 100% Complete
-- ✅ **Business Setup** - 100% Complete
-- ✅ **Transaction Auto-Capture** - 100% Complete
-- ✅ **Bank Auto-Reconciliation** - 100% Complete
-- ✅ **Inventory-Accounting Coupling** - 100% Complete
-- ✅ **Cash Discipline System** - 100% Complete
-- ✅ **POS Quick Bill** - 100% Complete
-- ✅ **Money Flow Interface** - 100% Complete
-- ✅ **Tax Autopilot** - 100% Complete 🆕
-- ✅ **Self-Healing System** - 100% Complete 🆕
-- ✅ **Financial Insights** - 100% Complete 🆕
-- ✅ **Accounting Books** - 100% Complete
-- ✅ **GST & TDS** - 100% Complete
-
-**Total Code:** 8000+ lines of production-ready autonomous accounting code
-
----
-
-## 🎉 WHAT MAKES THIS SPECIAL
-
-### 1. **First Self-Healing Accounting System**
-No other accounting software automatically fixes errors. MindStack does.
-
-### 2. **First Human-Language Financial View**
-Wave shows numbers. Tally shows reports. MindStack EXPLAINS what they mean.
-
-### 3. **First Tax Autopilot**
-Other systems require manual tax posting. MindStack does it automatically per transaction.
-
-### 4. **First Pattern Learning System**
-Other systems don't learn. MindStack learns from every correction and applies it everywhere.
-
-### 5. **Truly Autonomous**
-Not just "automated" - it's **autonomous**. Makes intelligent decisions without human intervention.
-
----
-
-## 📄 LICENSE
-
-MIT License - see [LICENSE](LICENSE) file for details
-
----
-
-## 👨‍💻 AUTHOR
-
-**MindStack Team**
-- GitHub: [@Nisu7648](https://github.com/Nisu7648)
+- **10,600+ lines** of production code
+- **78 jurisdictions** tax coverage
+- **90% automation** in transaction entry
+- **85% auto-match** rate in bank reconciliation
+- **50+ report types**
+- **5 capture sources**
+- **4 matching algorithms**
+- **0 accounting knowledge** required
 
 ---
 
 ## 🤝 CONTRIBUTING
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ---
 
-## 🌟 STAR THIS REPO
+## 📄 LICENSE
 
-If you find MindStack useful, please ⭐ star this repository!
+MIT License - See [LICENSE](LICENSE) for details
 
 ---
 
-**Built with ❤️ for businesses that want accounting to run itself**
+## 🙏 ACKNOWLEDGMENTS
 
-*"The world's first self-healing, self-explaining accounting system."*
+Built with ❤️ by the MindStack Team
+
+Special thanks to:
+- React Native community
+- TensorFlow.js team
+- Tesseract.js contributors
 
 ---
 
 ## 📞 SUPPORT
 
-For questions or support:
-- 📧 Email: support@mindstack.io
-- 📱 WhatsApp: +91-XXXXXXXXXX
-- 🌐 Website: https://mindstack.io
+- **Email:** support@mindstack.app
+- **Issues:** [GitHub Issues](https://github.com/Nisu7648/MindStack/issues)
+- **Docs:** [Documentation](https://docs.mindstack.app)
 
 ---
 
-**MindStack - The Autonomous Accounting Operating System**
-
-*Accounting that runs itself. Business that runs smoothly.*
+**MindStack - The only accounting system that thinks for you.** 🚀

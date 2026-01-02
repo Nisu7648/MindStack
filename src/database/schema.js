@@ -20,6 +20,17 @@
  * - Profit & Loss: Annually (or quarterly for management)
  * - Balance Sheet: Annually (as on last day of financial year)
  * 
+ * ALL 9 SUBSIDIARY BOOKS:
+ * 1. Purchase Book - Credit purchases
+ * 2. Sales Book - Credit sales
+ * 3. Purchase Return Book - Returns to suppliers
+ * 4. Sales Return Book - Returns from customers
+ * 5. Cash Book - Cash transactions
+ * 6. Bank Book - Bank transactions
+ * 7. Petty Cash Book - Small expenses
+ * 8. Bills Receivable Book - Bills received from debtors
+ * 9. Bills Payable Book - Bills accepted for creditors
+ * 
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -350,7 +361,69 @@ export class DatabaseSchema {
     `);
 
     // ═══════════════════════════════════════════════════════════════════════
-    // 14. TRIAL BALANCE (MONTHLY/QUARTERLY/ANNUAL)
+    // 14. BILLS RECEIVABLE BOOK (MISSING - NOW ADDED!)
+    // ═══════════════════════════════════════════════════════════════════════
+    await db.executeSql(`
+      CREATE TABLE IF NOT EXISTS bills_receivable_book (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entry_date DATE NOT NULL,
+        period_id INTEGER,
+        bill_number TEXT NOT NULL UNIQUE,
+        drawer_name TEXT NOT NULL,
+        drawer_code TEXT,
+        acceptor_name TEXT NOT NULL,
+        acceptor_code TEXT,
+        bill_type TEXT CHECK(bill_type IN ('PROMISSORY_NOTE', 'BILL_OF_EXCHANGE')),
+        bill_amount REAL NOT NULL,
+        due_date DATE NOT NULL,
+        term_days INTEGER,
+        particulars TEXT,
+        ledger_folio TEXT,
+        status TEXT DEFAULT 'PENDING' CHECK(status IN ('PENDING', 'HONORED', 'DISHONORED', 'DISCOUNTED', 'ENDORSED', 'RENEWED')),
+        honored_date DATE,
+        dishonored_date DATE,
+        discount_amount REAL DEFAULT 0,
+        discount_date DATE,
+        journal_id TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (journal_id) REFERENCES journal_entries(journal_id),
+        FOREIGN KEY (period_id) REFERENCES accounting_periods(id)
+      )
+    `);
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // 15. BILLS PAYABLE BOOK (MISSING - NOW ADDED!)
+    // ═══════════════════════════════════════════════════════════════════════
+    await db.executeSql(`
+      CREATE TABLE IF NOT EXISTS bills_payable_book (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entry_date DATE NOT NULL,
+        period_id INTEGER,
+        bill_number TEXT NOT NULL UNIQUE,
+        payee_name TEXT NOT NULL,
+        payee_code TEXT,
+        acceptor_name TEXT NOT NULL,
+        acceptor_code TEXT,
+        bill_type TEXT CHECK(bill_type IN ('PROMISSORY_NOTE', 'BILL_OF_EXCHANGE')),
+        bill_amount REAL NOT NULL,
+        due_date DATE NOT NULL,
+        term_days INTEGER,
+        particulars TEXT,
+        ledger_folio TEXT,
+        status TEXT DEFAULT 'PENDING' CHECK(status IN ('PENDING', 'PAID', 'DISHONORED', 'RENEWED', 'CANCELLED')),
+        paid_date DATE,
+        dishonored_date DATE,
+        journal_id TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (journal_id) REFERENCES journal_entries(journal_id),
+        FOREIGN KEY (period_id) REFERENCES accounting_periods(id)
+      )
+    `);
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // 16. TRIAL BALANCE (MONTHLY/QUARTERLY/ANNUAL)
     // ═══════════════════════════════════════════════════════════════════════
     await db.executeSql(`
       CREATE TABLE IF NOT EXISTS trial_balance (
@@ -374,7 +447,7 @@ export class DatabaseSchema {
     `);
 
     // ═══════════════════════════════════════════════════════════════════════
-    // 15. TRADING ACCOUNT (ANNUAL)
+    // 17. TRADING ACCOUNT (ANNUAL)
     // ═══════════════════════════════════════════════════════════════════════
     await db.executeSql(`
       CREATE TABLE IF NOT EXISTS trading_account (
@@ -396,7 +469,7 @@ export class DatabaseSchema {
     `);
 
     // ═══════════════════════════════════════════════════════════════════════
-    // 16. PROFIT & LOSS ACCOUNT (ANNUAL)
+    // 18. PROFIT & LOSS ACCOUNT (ANNUAL)
     // ═══════════════════════════════════════════════════════════════════════
     await db.executeSql(`
       CREATE TABLE IF NOT EXISTS profit_loss_account (
@@ -417,7 +490,7 @@ export class DatabaseSchema {
     `);
 
     // ═══════════════════════════════════════════════════════════════════════
-    // 17. BALANCE SHEET (ANNUAL - AS ON LAST DAY)
+    // 19. BALANCE SHEET (ANNUAL - AS ON LAST DAY)
     // ═══════════════════════════════════════════════════════════════════════
     await db.executeSql(`
       CREATE TABLE IF NOT EXISTS balance_sheet (
@@ -446,7 +519,7 @@ export class DatabaseSchema {
     `);
 
     // ═══════════════════════════════════════════════════════════════════════
-    // 18. FINANCIAL RATIOS (CALCULATED)
+    // 20. FINANCIAL RATIOS (CALCULATED)
     // ═══════════════════════════════════════════════════════════════════════
     await db.executeSql(`
       CREATE TABLE IF NOT EXISTS financial_ratios (
@@ -469,7 +542,7 @@ export class DatabaseSchema {
     `);
 
     // ═══════════════════════════════════════════════════════════════════════
-    // 19. PERIOD CLOSING LOG
+    // 21. PERIOD CLOSING LOG
     // ═══════════════════════════════════════════════════════════════════════
     await db.executeSql(`
       CREATE TABLE IF NOT EXISTS period_closing_log (
@@ -490,7 +563,7 @@ export class DatabaseSchema {
     `);
 
     // ═══════════════════════════════════════════════════════════════════════
-    // 20. PDF GENERATION LOG
+    // 22. PDF GENERATION LOG
     // ═══════════════════════════════════════════════════════════════════════
     await db.executeSql(`
       CREATE TABLE IF NOT EXISTS pdf_generation_log (
@@ -515,8 +588,12 @@ export class DatabaseSchema {
     await db.executeSql('CREATE INDEX IF NOT EXISTS idx_ledger_date ON ledger(entry_date)');
     await db.executeSql('CREATE INDEX IF NOT EXISTS idx_ledger_period ON ledger(period_id)');
     await db.executeSql('CREATE INDEX IF NOT EXISTS idx_trial_balance_period ON trial_balance(period_id)');
+    await db.executeSql('CREATE INDEX IF NOT EXISTS idx_bills_receivable_status ON bills_receivable_book(status)');
+    await db.executeSql('CREATE INDEX IF NOT EXISTS idx_bills_receivable_due_date ON bills_receivable_book(due_date)');
+    await db.executeSql('CREATE INDEX IF NOT EXISTS idx_bills_payable_status ON bills_payable_book(status)');
+    await db.executeSql('CREATE INDEX IF NOT EXISTS idx_bills_payable_due_date ON bills_payable_book(due_date)');
 
-    console.log('✅ All database tables created successfully');
+    console.log('✅ All 22 database tables created successfully with ALL 9 subsidiary books');
   }
 }
 

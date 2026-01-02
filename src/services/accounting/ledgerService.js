@@ -1,6 +1,6 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * LEDGER SERVICE - COMPLETE INDIAN ACCOUNTING SYSTEM
+ * LEDGER SERVICE - COMPLETE INDIAN ACCOUNTING SYSTEM WITH FULL RULES
  * ═══════════════════════════════════════════════════════════════════════════
  * 
  * LEDGER = Account-wise record of all transactions
@@ -12,13 +12,47 @@
  * │ Date │ Particulars│Voucher│ LF │ ₹  │ Date │Particulars│Voucher│ LF │ ₹  │
  * └──────┴──────────┴─────────┴────┴────┴──────┴──────────┴─────────┴────┴────┘
  * 
- * RULES:
- * - Every journal entry is posted to respective ledger accounts
- * - Debit entries go to DEBIT SIDE
- * - Credit entries go to CREDIT SIDE
- * - Balance is calculated: Total Debits - Total Credits
- * - Debit Balance: Assets, Expenses, Losses
- * - Credit Balance: Liabilities, Capital, Income, Gains
+ * GOLDEN RULES OF ACCOUNTING:
+ * 
+ * 1. PERSONAL ACCOUNTS (Debtors, Creditors, Capital):
+ *    - Debit: The Receiver
+ *    - Credit: The Giver
+ * 
+ * 2. REAL ACCOUNTS (Assets, Properties):
+ *    - Debit: What Comes In
+ *    - Credit: What Goes Out
+ * 
+ * 3. NOMINAL ACCOUNTS (Income, Expenses):
+ *    - Debit: All Expenses and Losses
+ *    - Credit: All Incomes and Gains
+ * 
+ * MODERN CLASSIFICATION:
+ * 
+ * DEBIT SIDE (Dr.):
+ * - Assets (Cash, Bank, Stock, Furniture, Building, etc.)
+ * - Expenses (Rent, Salary, Electricity, etc.)
+ * - Losses (Loss on Sale, Bad Debts, etc.)
+ * - Drawings (Owner withdrawals)
+ * - Debtors (Receivables)
+ * 
+ * CREDIT SIDE (Cr.):
+ * - Liabilities (Loans, Creditors, etc.)
+ * - Capital (Owner's equity)
+ * - Income (Sales, Commission, Interest Received, etc.)
+ * - Gains (Profit on Sale, Discount Received, etc.)
+ * - Reserves & Provisions
+ * 
+ * BALANCE CALCULATION:
+ * - Balance = Total Debits - Total Credits
+ * - Positive Balance = Debit Balance (Dr.)
+ * - Negative Balance = Credit Balance (Cr.)
+ * 
+ * ACCOUNT CODE STRUCTURE:
+ * 1xxx = Assets (Debit Balance)
+ * 2xxx = Liabilities (Credit Balance)
+ * 3xxx = Capital (Credit Balance)
+ * 4xxx = Income (Credit Balance)
+ * 5xxx = Expenses (Debit Balance)
  * 
  * ═══════════════════════════════════════════════════════════════════════════
  */
@@ -42,7 +76,7 @@ export class LedgerService {
 
   /**
    * ═══════════════════════════════════════════════════════════════════════
-   * HELPER: FORMAT BALANCE
+   * HELPER: FORMAT BALANCE WITH DR/CR
    * ═══════════════════════════════════════════════════════════════════════
    */
   static formatBalance(amount) {
@@ -53,11 +87,75 @@ export class LedgerService {
 
   /**
    * ═══════════════════════════════════════════════════════════════════════
+   * VALIDATE ACCOUNT TYPE AND BALANCE
+   * ═══════════════════════════════════════════════════════════════════════
+   */
+  static validateAccountBalance(accountCode, balance) {
+    const firstDigit = accountCode.charAt(0);
+    
+    // Assets (1xxx) should have Debit Balance
+    if (firstDigit === '1' && balance < 0) {
+      return {
+        valid: false,
+        warning: `Asset account ${accountCode} has Credit Balance. Assets should have Debit Balance.`
+      };
+    }
+    
+    // Liabilities (2xxx) should have Credit Balance
+    if (firstDigit === '2' && balance > 0) {
+      return {
+        valid: false,
+        warning: `Liability account ${accountCode} has Debit Balance. Liabilities should have Credit Balance.`
+      };
+    }
+    
+    // Capital (3xxx) should have Credit Balance
+    if (firstDigit === '3' && balance > 0) {
+      return {
+        valid: false,
+        warning: `Capital account ${accountCode} has Debit Balance. Capital should have Credit Balance.`
+      };
+    }
+    
+    // Income (4xxx) should have Credit Balance
+    if (firstDigit === '4' && balance > 0) {
+      return {
+        valid: false,
+        warning: `Income account ${accountCode} has Debit Balance. Income should have Credit Balance.`
+      };
+    }
+    
+    // Expenses (5xxx) should have Debit Balance
+    if (firstDigit === '5' && balance < 0) {
+      return {
+        valid: false,
+        warning: `Expense account ${accountCode} has Credit Balance. Expenses should have Debit Balance.`
+      };
+    }
+    
+    return { valid: true };
+  }
+
+  /**
+   * ═══════════════════════════════════════════════════════════════════════
    * POST TO LEDGER - FROM JOURNAL ENTRY (DOUBLE-SIDED FORMAT)
    * ═══════════════════════════════════════════════════════════════════════
    */
   static async postToLedger(journalEntry) {
     try {
+      // Validate journal entry first
+      if (!journalEntry || !journalEntry.entries || journalEntry.entries.length === 0) {
+        throw new Error('Invalid journal entry');
+      }
+
+      // Verify double entry: Total Debits = Total Credits
+      const totalDebits = journalEntry.entries.reduce((sum, e) => sum + (e.debit || 0), 0);
+      const totalCredits = journalEntry.entries.reduce((sum, e) => sum + (e.credit || 0), 0);
+      
+      if (Math.abs(totalDebits - totalCredits) > 0.01) {
+        throw new Error(`Journal entry not balanced. Debits: ${totalDebits}, Credits: ${totalCredits}`);
+      }
+
       // Post each line to respective account ledger
       for (const entry of journalEntry.entries) {
         await this.postLedgerEntry({
@@ -68,11 +166,14 @@ export class LedgerService {
           voucherNumber: journalEntry.voucherNumber,
           voucherType: journalEntry.voucherType,
           ledgerFolio: entry.ledgerFolio || '',
-          debit: entry.debit,
-          credit: entry.credit,
-          isDebit: entry.debit > 0,
-          isCredit: entry.credit > 0,
-          journalId: journalEntry.id
+          debitAmount: entry.debit || 0,
+          creditAmount: entry.credit || 0,
+          isDebit: (entry.debit || 0) > 0,
+          isCredit: (entry.credit || 0) > 0,
+          debitParticulars: (entry.debit || 0) > 0 ? this.getParticulars(entry, journalEntry) : '',
+          creditParticulars: (entry.credit || 0) > 0 ? this.getParticulars(entry, journalEntry) : '',
+          journalId: journalEntry.id,
+          narration: journalEntry.narration || ''
         });
       }
 
@@ -84,58 +185,64 @@ export class LedgerService {
   }
 
   /**
-   * Get particulars for ledger entry
+   * ═══════════════════════════════════════════════════════════════════════
+   * GET PARTICULARS FOR LEDGER ENTRY
+   * ═══════════════════════════════════════════════════════════════════════
    */
   static getParticulars(entry, journalEntry) {
     // For debit entry, show credit account with "To"
     // For credit entry, show debit account with "By"
-    if (entry.debit > 0) {
+    if ((entry.debit || 0) > 0) {
       // This is debit entry, show "To [Credit Account]"
-      const creditEntry = journalEntry.entries.find(e => e.credit > 0);
+      const creditEntry = journalEntry.entries.find(e => (e.credit || 0) > 0);
       return `To ${creditEntry ? creditEntry.accountName : 'Various'} A/c`;
     } else {
       // This is credit entry, show "By [Debit Account]"
-      const debitEntry = journalEntry.entries.find(e => e.debit > 0);
+      const debitEntry = journalEntry.entries.find(e => (e.debit || 0) > 0);
       return `By ${debitEntry ? debitEntry.accountName : 'Various'} A/c`;
     }
   }
 
   /**
    * ═══════════════════════════════════════════════════════════════════════
-   * POST SINGLE LEDGER ENTRY (DOUBLE-SIDED FORMAT)
+   * POST SINGLE LEDGER ENTRY
    * ═══════════════════════════════════════════════════════════════════════
    */
-  static async postLedgerEntry(data) {
+  static async postLedgerEntry(entry) {
     try {
+      const ledgerData = await StorageService.readLedger();
+      
+      if (!ledgerData[entry.accountCode]) {
+        ledgerData[entry.accountCode] = {
+          accountCode: entry.accountCode,
+          accountName: entry.accountName,
+          entries: []
+        };
+      }
+
       const ledgerEntry = {
-        id: Date.now().toString(),
-        accountCode: data.accountCode,
-        accountName: data.accountName,
-        date: data.date,
-        dateFormatted: moment(data.date).format('DD-MMM-YYYY'),
-        particulars: data.particulars,
-        voucherNumber: data.voucherNumber,
-        voucherType: data.voucherType,
-        ledgerFolio: data.ledgerFolio || '',
-        
-        // Debit side
-        isDebit: data.isDebit,
-        debitParticulars: data.isDebit ? data.particulars : '',
-        debitAmount: data.debit || 0,
-        
-        // Credit side
-        isCredit: data.isCredit,
-        creditParticulars: data.isCredit ? data.particulars : '',
-        creditAmount: data.credit || 0,
-        
-        // Common
-        debit: data.debit || 0,
-        credit: data.credit || 0,
-        journalId: data.journalId
+        id: `LED-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        date: entry.date,
+        particulars: entry.particulars,
+        voucherNumber: entry.voucherNumber,
+        voucherType: entry.voucherType,
+        ledgerFolio: entry.ledgerFolio,
+        debitAmount: entry.debitAmount,
+        creditAmount: entry.creditAmount,
+        isDebit: entry.isDebit,
+        isCredit: entry.isCredit,
+        debitParticulars: entry.debitParticulars,
+        creditParticulars: entry.creditParticulars,
+        journalId: entry.journalId,
+        narration: entry.narration,
+        timestamp: new Date().toISOString()
       };
 
-      await StorageService.saveToLedger(data.accountCode, ledgerEntry);
-      return { success: true, data: ledgerEntry };
+      ledgerData[entry.accountCode].entries.push(ledgerEntry);
+
+      await StorageService.writeLedger(ledgerData);
+
+      return { success: true, entry: ledgerEntry };
     } catch (error) {
       console.error('Post ledger entry error:', error);
       throw error;
@@ -144,37 +251,45 @@ export class LedgerService {
 
   /**
    * ═══════════════════════════════════════════════════════════════════════
-   * GET LEDGER ACCOUNT (DOUBLE-SIDED WITH BALANCES)
+   * GET LEDGER ACCOUNT (DOUBLE-SIDED FORMAT)
    * ═══════════════════════════════════════════════════════════════════════
    */
   static async getLedgerAccount(accountCode, filters = {}) {
     try {
-      const result = await StorageService.getLedger(accountCode, filters);
+      const ledgerData = await StorageService.readLedger();
       
-      if (!result.success) return result;
-
-      let entries = result.data;
-      let runningBalance = 0;
-
-      // Calculate running balance
-      entries = entries.map(entry => {
-        runningBalance += entry.debit - entry.credit;
-        
+      if (!ledgerData[accountCode]) {
         return {
-          ...entry,
-          balance: runningBalance,
-          balanceFormatted: this.formatBalance(runningBalance)
+          success: false,
+          error: `Account ${accountCode} not found`
         };
-      });
+      }
+
+      const account = ledgerData[accountCode];
+      let entries = [...account.entries];
+
+      // Apply filters
+      if (filters.fromDate) {
+        entries = entries.filter(e => moment(e.date).isSameOrAfter(moment(filters.fromDate)));
+      }
+      if (filters.toDate) {
+        entries = entries.filter(e => moment(e.date).isSameOrBefore(moment(filters.toDate)));
+      }
+
+      // Sort by date
+      entries.sort((a, b) => moment(a.date).diff(moment(b.date)));
 
       // Separate debit and credit entries
       const debitEntries = entries.filter(e => e.isDebit);
       const creditEntries = entries.filter(e => e.isCredit);
 
       // Calculate totals
-      const totalDebits = entries.reduce((sum, e) => sum + e.debit, 0);
-      const totalCredits = entries.reduce((sum, e) => sum + e.credit, 0);
-      const closingBalance = totalDebits - totalCredits;
+      const totalDebits = entries.reduce((sum, e) => sum + (e.debitAmount || 0), 0);
+      const totalCredits = entries.reduce((sum, e) => sum + (e.creditAmount || 0), 0);
+      const balance = totalDebits - totalCredits;
+
+      // Validate balance
+      const validation = this.validateAccountBalance(accountCode, balance);
 
       return {
         success: true,
@@ -183,12 +298,15 @@ export class LedgerService {
         creditEntries: creditEntries,
         summary: {
           accountCode: accountCode,
-          accountName: entries.length > 0 ? entries[0].accountName : '',
+          accountName: account.accountName,
           totalDebits: totalDebits,
           totalCredits: totalCredits,
-          closingBalance: closingBalance,
-          closingBalanceFormatted: this.formatBalance(closingBalance)
-        }
+          closingBalance: balance,
+          totalDebitsFormatted: this.formatAmount(totalDebits),
+          totalCreditsFormatted: this.formatAmount(totalCredits),
+          closingBalanceFormatted: this.formatBalance(balance)
+        },
+        validation: validation
       };
     } catch (error) {
       console.error('Get ledger account error:', error);
@@ -203,39 +321,31 @@ export class LedgerService {
    */
   static async getAllLedgerAccounts(filters = {}) {
     try {
-      const result = await StorageService.getAllLedgers(filters);
-      
-      if (!result.success) return result;
-
+      const ledgerData = await StorageService.readLedger();
       const accounts = [];
-      
-      for (const [accountCode, entries] of Object.entries(result.data)) {
-        if (entries.length === 0) continue;
 
-        // Calculate totals
-        const totalDebits = entries.reduce((sum, e) => sum + e.debit, 0);
-        const totalCredits = entries.reduce((sum, e) => sum + e.credit, 0);
-        const balance = totalDebits - totalCredits;
-
-        accounts.push({
-          accountCode: accountCode,
-          accountName: entries[0].accountName,
-          totalDebits: totalDebits,
-          totalCredits: totalCredits,
-          balance: balance,
-          balanceFormatted: this.formatBalance(balance),
-          entryCount: entries.length
-        });
+      for (const accountCode in ledgerData) {
+        const result = await this.getLedgerAccount(accountCode, filters);
+        
+        if (result.success) {
+          accounts.push({
+            accountCode: accountCode,
+            accountName: result.summary.accountName,
+            totalDebits: result.summary.totalDebits,
+            totalCredits: result.summary.totalCredits,
+            balance: result.summary.closingBalance,
+            balanceFormatted: result.summary.closingBalanceFormatted,
+            validation: result.validation
+          });
+        }
       }
+
+      // Sort by account code
+      accounts.sort((a, b) => a.accountCode.localeCompare(b.accountCode));
 
       return {
         success: true,
-        data: accounts,
-        summary: {
-          totalAccounts: accounts.length,
-          totalDebits: accounts.reduce((sum, a) => sum + a.totalDebits, 0),
-          totalCredits: accounts.reduce((sum, a) => sum + a.totalCredits, 0)
-        }
+        data: accounts
       };
     } catch (error) {
       console.error('Get all ledger accounts error:', error);
@@ -245,67 +355,94 @@ export class LedgerService {
 
   /**
    * ═══════════════════════════════════════════════════════════════════════
-   * GET ACCOUNT BALANCE
+   * GET LEDGER SUMMARY BY GROUP
    * ═══════════════════════════════════════════════════════════════════════
    */
-  static async getAccountBalance(accountCode) {
+  static async getLedgerSummaryByGroup(filters = {}) {
     try {
-      const result = await this.getLedgerAccount(accountCode);
+      const result = await this.getAllLedgerAccounts(filters);
       
-      if (!result.success) {
-        return { success: true, balance: 0, balanceFormatted: '0.00 Dr' };
+      if (!result.success) return result;
+
+      const grouped = {
+        assets: [],
+        liabilities: [],
+        capital: [],
+        income: [],
+        expenses: []
+      };
+
+      for (const account of result.data) {
+        const firstDigit = account.accountCode.charAt(0);
+        
+        if (firstDigit === '1') {
+          grouped.assets.push(account);
+        } else if (firstDigit === '2') {
+          grouped.liabilities.push(account);
+        } else if (firstDigit === '3') {
+          grouped.capital.push(account);
+        } else if (firstDigit === '4') {
+          grouped.income.push(account);
+        } else if (firstDigit === '5') {
+          grouped.expenses.push(account);
+        }
       }
+
+      const summary = {
+        totalAssets: grouped.assets.reduce((sum, a) => sum + Math.abs(a.balance), 0),
+        totalLiabilities: grouped.liabilities.reduce((sum, a) => sum + Math.abs(a.balance), 0),
+        totalCapital: grouped.capital.reduce((sum, a) => sum + Math.abs(a.balance), 0),
+        totalIncome: grouped.income.reduce((sum, a) => sum + Math.abs(a.balance), 0),
+        totalExpenses: grouped.expenses.reduce((sum, a) => sum + Math.abs(a.balance), 0)
+      };
 
       return {
         success: true,
-        balance: result.summary.closingBalance,
-        balanceFormatted: result.summary.closingBalanceFormatted
+        grouped: grouped,
+        summary: summary
       };
     } catch (error) {
-      console.error('Get account balance error:', error);
+      console.error('Get ledger summary by group error:', error);
       return { success: false, error: error.message };
     }
   }
 
   /**
    * ═══════════════════════════════════════════════════════════════════════
-   * GET TRIAL BALANCE
+   * CLOSE LEDGER ACCOUNTS (YEAR-END CLOSING)
    * ═══════════════════════════════════════════════════════════════════════
    */
-  static async getTrialBalance(filters = {}) {
+  static async closeLedgerAccounts(closingDate, filters = {}) {
     try {
       const result = await this.getAllLedgerAccounts(filters);
       
       if (!result.success) return result;
 
-      const accounts = result.data;
-      
-      // Separate debit and credit balances
-      const debitBalances = accounts.filter(a => a.balance >= 0);
-      const creditBalances = accounts.filter(a => a.balance < 0);
+      const closingEntries = [];
 
-      const totalDebitBalances = debitBalances.reduce((sum, a) => sum + a.balance, 0);
-      const totalCreditBalances = creditBalances.reduce((sum, a) => sum + Math.abs(a.balance), 0);
+      for (const account of result.data) {
+        const firstDigit = account.accountCode.charAt(0);
+        
+        // Close Income and Expense accounts to Profit & Loss
+        if (firstDigit === '4' || firstDigit === '5') {
+          if (Math.abs(account.balance) > 0.01) {
+            closingEntries.push({
+              accountCode: account.accountCode,
+              accountName: account.accountName,
+              balance: account.balance,
+              type: firstDigit === '4' ? 'Income' : 'Expense'
+            });
+          }
+        }
+      }
 
       return {
         success: true,
-        data: {
-          debitBalances: debitBalances,
-          creditBalances: creditBalances.map(a => ({
-            ...a,
-            balance: Math.abs(a.balance),
-            balanceFormatted: this.formatAmount(Math.abs(a.balance))
-          }))
-        },
-        summary: {
-          totalDebitBalances: totalDebitBalances,
-          totalCreditBalances: totalCreditBalances,
-          difference: Math.abs(totalDebitBalances - totalCreditBalances),
-          isBalanced: Math.abs(totalDebitBalances - totalCreditBalances) < 0.01
-        }
+        closingEntries: closingEntries,
+        closingDate: closingDate
       };
     } catch (error) {
-      console.error('Get trial balance error:', error);
+      console.error('Close ledger accounts error:', error);
       return { success: false, error: error.message };
     }
   }
@@ -317,81 +454,42 @@ export class LedgerService {
    */
   static async searchLedgerEntries(searchTerm, filters = {}) {
     try {
-      const result = await StorageService.getAllLedgers(filters);
-      
-      if (!result.success) return result;
+      const ledgerData = await StorageService.readLedger();
+      const results = [];
 
-      const matchingEntries = [];
-      
-      for (const [accountCode, entries] of Object.entries(result.data)) {
-        const filtered = entries.filter(entry => 
-          entry.accountName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          entry.particulars.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          entry.voucherNumber.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+      for (const accountCode in ledgerData) {
+        const account = ledgerData[accountCode];
         
-        matchingEntries.push(...filtered);
+        for (const entry of account.entries) {
+          const matchesSearch = 
+            entry.particulars.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            entry.voucherNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            entry.narration.toLowerCase().includes(searchTerm.toLowerCase());
+
+          const matchesFilters = 
+            (!filters.fromDate || moment(entry.date).isSameOrAfter(moment(filters.fromDate))) &&
+            (!filters.toDate || moment(entry.date).isSameOrBefore(moment(filters.toDate)));
+
+          if (matchesSearch && matchesFilters) {
+            results.push({
+              ...entry,
+              accountCode: accountCode,
+              accountName: account.accountName
+            });
+          }
+        }
       }
+
+      // Sort by date (newest first)
+      results.sort((a, b) => moment(b.date).diff(moment(a.date)));
 
       return {
         success: true,
-        data: matchingEntries,
-        count: matchingEntries.length
+        data: results,
+        count: results.length
       };
     } catch (error) {
       console.error('Search ledger entries error:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  /**
-   * ═══════════════════════════════════════════════════════════════════════
-   * GET LEDGER SUMMARY
-   * ═══════════════════════════════════════════════════════════════════════
-   */
-  static async getLedgerSummary(filters = {}) {
-    try {
-      const result = await this.getAllLedgerAccounts(filters);
-      
-      if (!result.success) return result;
-
-      const accounts = result.data;
-      
-      // Categorize accounts
-      const assets = accounts.filter(a => a.balance >= 0 && a.accountCode.startsWith('1'));
-      const liabilities = accounts.filter(a => a.balance < 0 && a.accountCode.startsWith('2'));
-      const capital = accounts.filter(a => a.balance < 0 && a.accountCode.startsWith('3'));
-      const income = accounts.filter(a => a.balance < 0 && a.accountCode.startsWith('4'));
-      const expenses = accounts.filter(a => a.balance >= 0 && a.accountCode.startsWith('5'));
-
-      return {
-        success: true,
-        data: {
-          totalAccounts: accounts.length,
-          assets: {
-            count: assets.length,
-            total: assets.reduce((sum, a) => sum + a.balance, 0)
-          },
-          liabilities: {
-            count: liabilities.length,
-            total: liabilities.reduce((sum, a) => sum + Math.abs(a.balance), 0)
-          },
-          capital: {
-            count: capital.length,
-            total: capital.reduce((sum, a) => sum + Math.abs(a.balance), 0)
-          },
-          income: {
-            count: income.length,
-            total: income.reduce((sum, a) => sum + Math.abs(a.balance), 0)
-          },
-          expenses: {
-            count: expenses.length,
-            total: expenses.reduce((sum, a) => sum + a.balance, 0)
-          }
-        }
-      };
-    } catch (error) {
-      console.error('Get ledger summary error:', error);
       return { success: false, error: error.message };
     }
   }

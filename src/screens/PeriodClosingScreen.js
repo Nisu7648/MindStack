@@ -1,105 +1,143 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import PeriodClosingService from '../services/accounting/periodClosingService';
-import FinalAccountsPDFService from '../services/accounting/finalAccountsPDFService';
-import moment from 'moment';
+/**
+ * PERIOD CLOSING SCREEN - CONNECTED TO SERVICES
+ * 
+ * User clicks "Close Period" → Everything happens automatically
+ * - All subsidiary books closed
+ * - Ledger posted
+ * - Trial balance prepared
+ * - Trading account prepared
+ * - Profit & Loss prepared
+ * - Balance sheet prepared
+ * - All PDFs generated
+ * 
+ * Background logic handles everything
+ */
 
-export default function PeriodClosingScreen() {
-  const [periods, setPeriods] = useState([]);
-  const [selectedPeriod, setSelectedPeriod] = useState(null);
-  const [closingType, setClosingType] = useState('MONTHLY');
-  const [showCreatePeriod, setShowCreatePeriod] = useState(false);
-  const [newPeriod, setNewPeriod] = useState({
-    periodName: '',
-    periodType: 'MONTHLY',
-    startDate: new Date(),
-    endDate: new Date()
-  });
-  const [showStartDate, setShowStartDate] = useState(false);
-  const [showEndDate, setShowEndDate] = useState(false);
-  const [closingResult, setClosingResult] = useState(null);
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator
+} from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+import ScreenConnector from '../services/integration/ScreenConnector';
+import { supabase } from '../services/supabase';
+
+const PeriodClosingScreen = ({ navigation, route }) => {
+  const { businessId } = route.params;
+  
   const [loading, setLoading] = useState(false);
+  const [periodType, setPeriodType] = useState('monthly');
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [businessInfo, setBusinessInfo] = useState(null);
+  const [periodStatus, setPeriodStatus] = useState(null);
 
   useEffect(() => {
-    loadPeriods();
+    loadData();
   }, []);
 
-  const loadPeriods = async () => {
+  const loadData = async () => {
     try {
-      // Load periods from database
-      // Implementation depends on your database service
-      setPeriods([]);
+      // Load business info
+      const { data: business } = await supabase
+        .from('businesses')
+        .select('*')
+        .eq('id', businessId)
+        .single();
+      
+      setBusinessInfo(business);
+
+      // Check period status
+      await checkPeriodStatus();
     } catch (error) {
-      Alert.alert('Error', 'Failed to load periods');
+      console.error('Load data error:', error);
     }
   };
 
-  const createPeriod = async () => {
-    if (!newPeriod.periodName) {
-      Alert.alert('Error', 'Please enter period name');
-      return;
-    }
-
+  const checkPeriodStatus = async () => {
     try {
-      const result = await PeriodClosingService.createAccountingPeriod({
-        periodName: newPeriod.periodName,
-        periodType: newPeriod.periodType,
-        startDate: moment(newPeriod.startDate).format('YYYY-MM-DD'),
-        endDate: moment(newPeriod.endDate).format('YYYY-MM-DD')
-      });
-
-      if (result.success) {
-        Alert.alert('Success', 'Accounting period created');
-        setShowCreatePeriod(false);
-        loadPeriods();
-      } else {
-        Alert.alert('Error', result.error);
-      }
+      // Check if period is already closed
+      const { data } = await supabase
+        .from('period_closings')
+        .select('*')
+        .eq('business_id', businessId)
+        .eq('period_type', periodType)
+        .eq('month', selectedMonth)
+        .eq('year', selectedYear)
+        .single();
+      
+      setPeriodStatus(data);
     } catch (error) {
-      Alert.alert('Error', 'Failed to create period');
+      setPeriodStatus(null);
     }
   };
 
-  const performClosing = async () => {
-    if (!selectedPeriod) {
-      Alert.alert('Error', 'Please select a period');
-      return;
-    }
+  const months = [
+    { value: 1, label: 'January' },
+    { value: 2, label: 'February' },
+    { value: 3, label: 'March' },
+    { value: 4, label: 'April' },
+    { value: 5, label: 'May' },
+    { value: 6, label: 'June' },
+    { value: 7, label: 'July' },
+    { value: 8, label: 'August' },
+    { value: 9, label: 'September' },
+    { value: 10, label: 'October' },
+    { value: 11, label: 'November' },
+    { value: 12, label: 'December' }
+  ];
 
+  const years = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i);
+
+  /**
+   * ONE-CLICK PERIOD CLOSING
+   * Background logic handles everything automatically
+   */
+  const handleClosePeriod = async () => {
     Alert.alert(
       'Confirm Period Closing',
-      `Are you sure you want to perform ${closingType} closing?\n\nThis action cannot be undone.`,
+      `Are you sure you want to close ${periodType} period for ${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}?\n\nThis will:\n✅ Close all subsidiary books\n✅ Post to ledger\n✅ Generate trial balance\n✅ Generate trading account\n✅ Generate P&L\n✅ Generate balance sheet\n✅ Generate all PDFs`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Proceed', 
+        {
+          text: 'Close Period',
+          style: 'destructive',
           onPress: async () => {
             setLoading(true);
+            
             try {
-              let result;
-              
-              switch (closingType) {
-                case 'MONTHLY':
-                  result = await PeriodClosingService.performMonthlyClosing(selectedPeriod);
-                  break;
-                case 'QUARTERLY':
-                  result = await PeriodClosingService.performQuarterlyClosing(selectedPeriod);
-                  break;
-                case 'ANNUAL':
-                  result = await PeriodClosingService.performAnnualClosing(selectedPeriod);
-                  break;
-              }
+              // ONE-CLICK: Everything happens automatically
+              const result = await ScreenConnector.closePeriod({
+                periodType,
+                month: selectedMonth,
+                year: selectedYear,
+                businessId
+              }, businessId);
 
               if (result.success) {
-                setClosingResult(result);
-                Alert.alert('Success', result.message);
-              } else {
-                Alert.alert('Error', result.error);
+                Alert.alert(
+                  '✅ Period Closed Successfully!',
+                  `All financial statements generated:\n\n` +
+                  `📊 Trial Balance\n` +
+                  `📈 Trading Account\n` +
+                  `💰 Profit & Loss\n` +
+                  `📋 Balance Sheet\n\n` +
+                  `PDFs saved to phone storage`,
+                  [
+                    { text: 'View Reports', onPress: () => navigation.navigate('Reports') },
+                    { text: 'Done', onPress: () => navigation.goBack() }
+                  ]
+                );
+                
+                await checkPeriodStatus();
               }
             } catch (error) {
-              Alert.alert('Error', 'Failed to perform closing');
+              console.error('Close period error:', error);
             } finally {
               setLoading(false);
             }
@@ -109,457 +147,476 @@ export default function PeriodClosingScreen() {
     );
   };
 
-  const generateAllPDFs = async () => {
-    if (!closingResult) {
-      Alert.alert('Error', 'Please perform closing first');
-      return;
-    }
-
-    try {
-      Alert.alert('Generating PDFs', 'Please wait...');
-      
-      // Generate all PDFs based on closing type
-      const period = `${moment(newPeriod.startDate).format('DD/MM/YYYY')} to ${moment(newPeriod.endDate).format('DD/MM/YYYY')}`;
-      
-      if (closingResult.trialBalance) {
-        await FinalAccountsPDFService.generateTrialBalancePDF({}, period);
-      }
-      
-      if (closingResult.tradingAccount) {
-        await FinalAccountsPDFService.generateTradingAccountPDF({}, period);
-      }
-      
-      if (closingResult.profitLoss) {
-        await FinalAccountsPDFService.generateProfitLossAccountPDF({}, period);
-      }
-      
-      if (closingResult.balanceSheet) {
-        await FinalAccountsPDFService.generateBalanceSheetPDF(moment(newPeriod.endDate).format('YYYY-MM-DD'));
-      }
-
-      Alert.alert('Success', 'All PDFs generated successfully');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to generate PDFs');
-    }
-  };
-
-  const renderClosingResult = () => {
-    if (!closingResult) return null;
-
-    return (
-      <View style={styles.resultContainer}>
-        <Text style={styles.resultTitle}>CLOSING SUMMARY</Text>
-
-        {closingResult.trialBalance && (
-          <View style={styles.resultCard}>
-            <Text style={styles.resultCardTitle}>Trial Balance</Text>
-            <View style={styles.resultRow}>
-              <Text style={styles.resultLabel}>Status:</Text>
-              <Text style={[styles.resultValue, { color: closingResult.trialBalance.isBalanced ? '#4CAF50' : '#F44336' }]}>
-                {closingResult.trialBalance.isBalanced ? '✅ BALANCED' : '❌ NOT BALANCED'}
-              </Text>
-            </View>
-            {!closingResult.trialBalance.isBalanced && (
-              <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>Difference:</Text>
-                <Text style={styles.resultValue}>₹{closingResult.trialBalance.difference}</Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        {closingResult.tradingAccount && (
-          <View style={styles.resultCard}>
-            <Text style={styles.resultCardTitle}>Trading Account</Text>
-            <View style={styles.resultRow}>
-              <Text style={styles.resultLabel}>Gross Profit/Loss:</Text>
-              <Text style={[styles.resultValue, { color: closingResult.tradingAccount.data.calculations.isGrossProfit ? '#4CAF50' : '#F44336' }]}>
-                ₹{closingResult.tradingAccount.data.calculations.grossProfitFormatted}
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {closingResult.profitLoss && (
-          <View style={styles.resultCard}>
-            <Text style={styles.resultCardTitle}>Profit & Loss Account</Text>
-            <View style={styles.resultRow}>
-              <Text style={styles.resultLabel}>Net Profit/Loss:</Text>
-              <Text style={[styles.resultValue, { color: closingResult.profitLoss.data.calculations.isNetProfit ? '#4CAF50' : '#F44336' }]}>
-                ₹{closingResult.profitLoss.data.calculations.netProfitFormatted}
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {closingResult.balanceSheet && (
-          <View style={styles.resultCard}>
-            <Text style={styles.resultCardTitle}>Balance Sheet</Text>
-            <View style={styles.resultRow}>
-              <Text style={styles.resultLabel}>Total Assets:</Text>
-              <Text style={styles.resultValue}>₹{closingResult.balanceSheet.data.summary.totalAssetsFormatted}</Text>
-            </View>
-            <View style={styles.resultRow}>
-              <Text style={styles.resultLabel}>Total Liabilities:</Text>
-              <Text style={styles.resultValue}>₹{closingResult.balanceSheet.data.summary.totalLiabilitiesFormatted}</Text>
-            </View>
-            <View style={styles.resultRow}>
-              <Text style={styles.resultLabel}>Status:</Text>
-              <Text style={[styles.resultValue, { color: closingResult.balanceSheet.isBalanced ? '#4CAF50' : '#F44336' }]}>
-                {closingResult.balanceSheet.isBalanced ? '✅ BALANCED' : '❌ NOT BALANCED'}
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {closingResult.financialRatios && (
-          <View style={styles.resultCard}>
-            <Text style={styles.resultCardTitle}>Financial Ratios</Text>
-            <View style={styles.resultRow}>
-              <Text style={styles.resultLabel}>Current Ratio:</Text>
-              <Text style={styles.resultValue}>{closingResult.financialRatios.ratios.currentRatioFormatted}</Text>
-            </View>
-            <View style={styles.resultRow}>
-              <Text style={styles.resultLabel}>Quick Ratio:</Text>
-              <Text style={styles.resultValue}>{closingResult.financialRatios.ratios.quickRatioFormatted}</Text>
-            </View>
-            <View style={styles.resultRow}>
-              <Text style={styles.resultLabel}>Debt-Equity Ratio:</Text>
-              <Text style={styles.resultValue}>{closingResult.financialRatios.ratios.debtEquityRatioFormatted}</Text>
-            </View>
-            <View style={styles.resultRow}>
-              <Text style={styles.resultLabel}>Gross Profit Ratio:</Text>
-              <Text style={styles.resultValue}>{closingResult.financialRatios.ratios.grossProfitRatioFormatted}%</Text>
-            </View>
-            <View style={styles.resultRow}>
-              <Text style={styles.resultLabel}>Net Profit Ratio:</Text>
-              <Text style={styles.resultValue}>{closingResult.financialRatios.ratios.netProfitRatioFormatted}%</Text>
-            </View>
-          </View>
-        )}
-
-        <TouchableOpacity style={styles.pdfButton} onPress={generateAllPDFs}>
-          <Text style={styles.buttonText}>Generate All PDFs</Text>
-        </TouchableOpacity>
-      </View>
+  const handleReopenPeriod = async () => {
+    Alert.alert(
+      'Reopen Period',
+      'Are you sure you want to reopen this period? This will allow modifications.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reopen',
+          onPress: async () => {
+            setLoading(true);
+            try {
+              // Delete period closing record
+              await supabase
+                .from('period_closings')
+                .delete()
+                .eq('id', periodStatus.id);
+              
+              Alert.alert('✅ Success', 'Period reopened successfully');
+              await checkPeriodStatus();
+            } catch (error) {
+              Alert.alert('❌ Error', error.message);
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
     );
   };
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>PERIOD CLOSING</Text>
-
-      <View style={styles.infoCard}>
-        <Text style={styles.infoTitle}>📋 Closing Rules</Text>
-        <Text style={styles.infoText}>• Monthly: Close books, prepare Trial Balance</Text>
-        <Text style={styles.infoText}>• Quarterly: Trial Balance + Trading + P&L (optional)</Text>
-        <Text style={styles.infoText}>• Annual: All statements + Balance Sheet (mandatory)</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Period Closing</Text>
+        <Text style={styles.subtitle}>One-click closing with automatic financial statements</Text>
       </View>
 
+      {/* Period Type */}
       <View style={styles.section}>
-        <TouchableOpacity
-          style={styles.createButton}
-          onPress={() => setShowCreatePeriod(!showCreatePeriod)}
-        >
-          <Text style={styles.buttonText}>
-            {showCreatePeriod ? 'Hide' : 'Create New Period'}
-          </Text>
-        </TouchableOpacity>
+        <Text style={styles.label}>Period Type</Text>
+        <View style={styles.typeButtons}>
+          <TouchableOpacity
+            style={[styles.typeButton, periodType === 'monthly' && styles.typeButtonActive]}
+            onPress={() => setPeriodType('monthly')}
+          >
+            <Text style={[styles.typeButtonText, periodType === 'monthly' && styles.typeButtonTextActive]}>
+              Monthly
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.typeButton, periodType === 'quarterly' && styles.typeButtonActive]}
+            onPress={() => setPeriodType('quarterly')}
+          >
+            <Text style={[styles.typeButtonText, periodType === 'quarterly' && styles.typeButtonTextActive]}>
+              Quarterly
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.typeButton, periodType === 'annual' && styles.typeButtonActive]}
+            onPress={() => setPeriodType('annual')}
+          >
+            <Text style={[styles.typeButtonText, periodType === 'annual' && styles.typeButtonTextActive]}>
+              Annual
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-        {showCreatePeriod && (
-          <View style={styles.createPeriodForm}>
-            <Text style={styles.label}>Period Name:</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g., January 2024"
-              value={newPeriod.periodName}
-              onChangeText={(text) => setNewPeriod({ ...newPeriod, periodName: text })}
-            />
-
-            <Text style={styles.label}>Period Type:</Text>
-            <View style={styles.pickerContainer}>
+      {/* Period Selection */}
+      <View style={styles.section}>
+        <Text style={styles.label}>Select Period</Text>
+        
+        {periodType === 'monthly' && (
+          <View style={styles.row}>
+            <View style={styles.col}>
+              <Text style={styles.label}>Month</Text>
               <Picker
-                selectedValue={newPeriod.periodType}
-                onValueChange={(value) => setNewPeriod({ ...newPeriod, periodType: value })}
+                selectedValue={selectedMonth}
+                onValueChange={(value) => {
+                  setSelectedMonth(value);
+                  checkPeriodStatus();
+                }}
                 style={styles.picker}
               >
-                <Picker.Item label="Monthly" value="MONTHLY" />
-                <Picker.Item label="Quarterly" value="QUARTERLY" />
-                <Picker.Item label="Annual" value="ANNUALLY" />
+                {months.map(month => (
+                  <Picker.Item key={month.value} label={month.label} value={month.value} />
+                ))}
               </Picker>
             </View>
-
-            <View style={styles.dateRow}>
-              <View style={styles.dateColumn}>
-                <Text style={styles.label}>Start Date:</Text>
-                <TouchableOpacity
-                  style={styles.dateButton}
-                  onPress={() => setShowStartDate(true)}
-                >
-                  <Text>{moment(newPeriod.startDate).format('DD/MM/YYYY')}</Text>
-                </TouchableOpacity>
-                {showStartDate && (
-                  <DateTimePicker
-                    value={newPeriod.startDate}
-                    mode="date"
-                    onChange={(event, date) => {
-                      setShowStartDate(false);
-                      if (date) setNewPeriod({ ...newPeriod, startDate: date });
-                    }}
-                  />
-                )}
-              </View>
-
-              <View style={styles.dateColumn}>
-                <Text style={styles.label}>End Date:</Text>
-                <TouchableOpacity
-                  style={styles.dateButton}
-                  onPress={() => setShowEndDate(true)}
-                >
-                  <Text>{moment(newPeriod.endDate).format('DD/MM/YYYY')}</Text>
-                </TouchableOpacity>
-                {showEndDate && (
-                  <DateTimePicker
-                    value={newPeriod.endDate}
-                    mode="date"
-                    onChange={(event, date) => {
-                      setShowEndDate(false);
-                      if (date) setNewPeriod({ ...newPeriod, endDate: date });
-                    }}
-                  />
-                )}
-              </View>
+            <View style={styles.col}>
+              <Text style={styles.label}>Year</Text>
+              <Picker
+                selectedValue={selectedYear}
+                onValueChange={(value) => {
+                  setSelectedYear(value);
+                  checkPeriodStatus();
+                }}
+                style={styles.picker}
+              >
+                {years.map(year => (
+                  <Picker.Item key={year} label={year.toString()} value={year} />
+                ))}
+              </Picker>
             </View>
+          </View>
+        )}
 
-            <TouchableOpacity style={styles.submitButton} onPress={createPeriod}>
-              <Text style={styles.buttonText}>Create Period</Text>
-            </TouchableOpacity>
+        {periodType === 'quarterly' && (
+          <View style={styles.row}>
+            <View style={styles.col}>
+              <Text style={styles.label}>Quarter</Text>
+              <Picker
+                selectedValue={Math.ceil(selectedMonth / 3)}
+                onValueChange={(value) => {
+                  setSelectedMonth(value * 3);
+                  checkPeriodStatus();
+                }}
+                style={styles.picker}
+              >
+                <Picker.Item label="Q1 (Jan-Mar)" value={1} />
+                <Picker.Item label="Q2 (Apr-Jun)" value={2} />
+                <Picker.Item label="Q3 (Jul-Sep)" value={3} />
+                <Picker.Item label="Q4 (Oct-Dec)" value={4} />
+              </Picker>
+            </View>
+            <View style={styles.col}>
+              <Text style={styles.label}>Year</Text>
+              <Picker
+                selectedValue={selectedYear}
+                onValueChange={(value) => {
+                  setSelectedYear(value);
+                  checkPeriodStatus();
+                }}
+                style={styles.picker}
+              >
+                {years.map(year => (
+                  <Picker.Item key={year} label={year.toString()} value={year} />
+                ))}
+              </Picker>
+            </View>
+          </View>
+        )}
+
+        {periodType === 'annual' && (
+          <View>
+            <Text style={styles.label}>Financial Year</Text>
+            <Picker
+              selectedValue={selectedYear}
+              onValueChange={(value) => {
+                setSelectedYear(value);
+                checkPeriodStatus();
+              }}
+              style={styles.picker}
+            >
+              {years.map(year => (
+                <Picker.Item 
+                  key={year} 
+                  label={`FY ${year}-${(year + 1).toString().slice(-2)}`} 
+                  value={year} 
+                />
+              ))}
+            </Picker>
           </View>
         )}
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Perform Closing</Text>
-
-        <Text style={styles.label}>Closing Type:</Text>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={closingType}
-            onValueChange={(value) => setClosingType(value)}
-            style={styles.picker}
+      {/* Period Status */}
+      {periodStatus && (
+        <View style={styles.statusSection}>
+          <Text style={styles.statusTitle}>⚠️ Period Already Closed</Text>
+          <Text style={styles.statusText}>
+            Closed on: {new Date(periodStatus.closed_at).toLocaleDateString()}
+          </Text>
+          <Text style={styles.statusText}>
+            Closed by: {periodStatus.closed_by_name || 'System'}
+          </Text>
+          
+          <TouchableOpacity
+            style={styles.reopenButton}
+            onPress={handleReopenPeriod}
+            disabled={loading}
           >
-            <Picker.Item label="Monthly Closing" value="MONTHLY" />
-            <Picker.Item label="Quarterly Closing" value="QUARTERLY" />
-            <Picker.Item label="Annual Closing (Year-End)" value="ANNUAL" />
-          </Picker>
+            <Text style={styles.reopenButtonText}>Reopen Period</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* What Will Happen */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>What Will Happen</Text>
+        
+        <View style={styles.stepCard}>
+          <Text style={styles.stepNumber}>1</Text>
+          <View style={styles.stepContent}>
+            <Text style={styles.stepTitle}>Close Subsidiary Books</Text>
+            <Text style={styles.stepDescription}>
+              All 9 subsidiary books will be closed and totaled
+            </Text>
+          </View>
         </View>
 
-        <View style={styles.closingInfo}>
-          <Text style={styles.closingInfoTitle}>
-            {closingType === 'MONTHLY' && '📅 Monthly Closing'}
-            {closingType === 'QUARTERLY' && '📊 Quarterly Closing'}
-            {closingType === 'ANNUAL' && '🎯 Annual Closing'}
-          </Text>
-          <Text style={styles.closingInfoText}>
-            {closingType === 'MONTHLY' && 'Closes all books and prepares Trial Balance'}
-            {closingType === 'QUARTERLY' && 'Prepares Trial Balance, Trading Account, and P&L'}
-            {closingType === 'ANNUAL' && 'Prepares all final accounts including Balance Sheet'}
-          </Text>
+        <View style={styles.stepCard}>
+          <Text style={styles.stepNumber}>2</Text>
+          <View style={styles.stepContent}>
+            <Text style={styles.stepTitle}>Post to Ledger</Text>
+            <Text style={styles.stepDescription}>
+              All entries posted to respective ledger accounts
+            </Text>
+          </View>
         </View>
 
-        <TouchableOpacity
-          style={[styles.closingButton, loading && styles.disabledButton]}
-          onPress={performClosing}
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>
-            {loading ? 'Processing...' : `Perform ${closingType} Closing`}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.stepCard}>
+          <Text style={styles.stepNumber}>3</Text>
+          <View style={styles.stepContent}>
+            <Text style={styles.stepTitle}>Prepare Trial Balance</Text>
+            <Text style={styles.stepDescription}>
+              Trial balance prepared and verified (Dr = Cr)
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.stepCard}>
+          <Text style={styles.stepNumber}>4</Text>
+          <View style={styles.stepContent}>
+            <Text style={styles.stepTitle}>Prepare Trading Account</Text>
+            <Text style={styles.stepDescription}>
+              Calculate gross profit/loss from trading activities
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.stepCard}>
+          <Text style={styles.stepNumber}>5</Text>
+          <View style={styles.stepContent}>
+            <Text style={styles.stepTitle}>Prepare Profit & Loss</Text>
+            <Text style={styles.stepDescription}>
+              Calculate net profit/loss for the period
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.stepCard}>
+          <Text style={styles.stepNumber}>6</Text>
+          <View style={styles.stepContent}>
+            <Text style={styles.stepTitle}>Prepare Balance Sheet</Text>
+            <Text style={styles.stepDescription}>
+              Show financial position (Assets = Liabilities)
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.stepCard}>
+          <Text style={styles.stepNumber}>7</Text>
+          <View style={styles.stepContent}>
+            <Text style={styles.stepTitle}>Generate PDFs</Text>
+            <Text style={styles.stepDescription}>
+              All reports saved to phone storage
+            </Text>
+          </View>
+        </View>
       </View>
 
-      {renderClosingResult()}
+      {/* Close Button */}
+      {!periodStatus && (
+        <TouchableOpacity
+          style={[styles.closeButton, loading && styles.closeButtonDisabled]}
+          onPress={handleClosePeriod}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={styles.closeButtonText}>
+              ✨ Close Period (One-Click)
+            </Text>
+          )}
+        </TouchableOpacity>
+      )}
+
+      <View style={styles.infoBox}>
+        <Text style={styles.infoTitle}>ℹ️ Important Notes</Text>
+        <Text style={styles.infoText}>
+          • Period closing is reversible (can reopen)
+        </Text>
+        <Text style={styles.infoText}>
+          • All PDFs saved to /MindStack/period_closing/
+        </Text>
+        <Text style={styles.infoText}>
+          • Financial year: April 1 - March 31 (India)
+        </Text>
+        <Text style={styles.infoText}>
+          • Process takes 1-2 minutes
+        </Text>
+      </View>
     </ScrollView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-    padding: 15,
+    backgroundColor: '#f5f5f5'
+  },
+  header: {
+    backgroundColor: '#FF9800',
+    padding: 20,
+    paddingTop: 40
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 20,
-    color: '#2196F3',
+    color: 'white'
   },
-  infoCard: {
-    backgroundColor: '#e3f2fd',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#2196F3',
-  },
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1976D2',
-    marginBottom: 10,
-  },
-  infoText: {
+  subtitle: {
     fontSize: 14,
-    color: '#333',
-    marginBottom: 5,
+    color: 'white',
+    marginTop: 5,
+    opacity: 0.9
   },
   section: {
     backgroundColor: 'white',
     padding: 15,
-    borderRadius: 10,
-    marginBottom: 20,
-    elevation: 3,
+    marginTop: 10
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2196F3',
     marginBottom: 15,
-  },
-  createButton: {
-    backgroundColor: '#4CAF50',
-    padding: 15,
-    borderRadius: 5,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  createPeriodForm: {
-    marginTop: 15,
+    color: '#333'
   },
   label: {
     fontSize: 14,
-    fontWeight: 'bold',
-    marginBottom: 5,
-    color: '#333',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 5,
-    padding: 12,
-    marginBottom: 15,
-    fontSize: 16,
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 5,
-    marginBottom: 15,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 8,
+    marginTop: 10
   },
   picker: {
-    height: 50,
-  },
-  dateRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 15,
-  },
-  dateColumn: {
-    flex: 1,
-    marginHorizontal: 5,
-  },
-  dateButton: {
     borderWidth: 1,
     borderColor: '#ddd',
-    borderRadius: 5,
-    padding: 12,
-    backgroundColor: 'white',
+    borderRadius: 8
   },
-  submitButton: {
-    backgroundColor: '#2196F3',
-    padding: 15,
-    borderRadius: 5,
-    alignItems: 'center',
-  },
-  closingInfo: {
-    backgroundColor: '#fff3cd',
-    padding: 15,
-    borderRadius: 5,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#ffc107',
-  },
-  closingInfoTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#856404',
-    marginBottom: 5,
-  },
-  closingInfoText: {
-    fontSize: 14,
-    color: '#856404',
-  },
-  closingButton: {
-    backgroundColor: '#F44336',
-    padding: 15,
-    borderRadius: 5,
-    alignItems: 'center',
-  },
-  disabledButton: {
-    backgroundColor: '#ccc',
-  },
-  resultContainer: {
-    backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 20,
-    elevation: 3,
-  },
-  resultTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2196F3',
-    textAlign: 'center',
-    marginBottom: 15,
-  },
-  resultCard: {
-    backgroundColor: '#f5f5f5',
-    padding: 15,
-    borderRadius: 5,
-    marginBottom: 15,
-  },
-  resultCardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
-  },
-  resultRow: {
+  typeButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 5,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    gap: 10
   },
-  resultLabel: {
+  typeButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    alignItems: 'center'
+  },
+  typeButtonActive: {
+    backgroundColor: '#FF9800',
+    borderColor: '#FF9800'
+  },
+  typeButtonText: {
+    fontSize: 14,
+    color: '#666'
+  },
+  typeButtonTextActive: {
+    color: 'white',
+    fontWeight: 'bold'
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 10
+  },
+  col: {
+    flex: 1
+  },
+  statusSection: {
+    backgroundColor: '#FFF3E0',
+    padding: 15,
+    marginTop: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF9800'
+  },
+  statusTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#E65100',
+    marginBottom: 10
+  },
+  statusText: {
     fontSize: 14,
     color: '#666',
+    marginBottom: 5
   },
-  resultValue: {
+  reopenButton: {
+    backgroundColor: '#2196F3',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 15
+  },
+  reopenButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold'
+  },
+  stepCard: {
+    flexDirection: 'row',
+    backgroundColor: '#f9f9f9',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    alignItems: 'center'
+  },
+  stepNumber: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#FF9800',
+    color: 'white',
+    textAlign: 'center',
+    lineHeight: 30,
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginRight: 12
+  },
+  stepContent: {
+    flex: 1
+  },
+  stepTitle: {
     fontSize: 14,
     fontWeight: 'bold',
     color: '#333',
+    marginBottom: 3
   },
-  pdfButton: {
-    backgroundColor: '#4CAF50',
-    padding: 15,
-    borderRadius: 5,
+  stepDescription: {
+    fontSize: 12,
+    color: '#666'
+  },
+  closeButton: {
+    backgroundColor: '#FF9800',
+    padding: 18,
+    margin: 15,
+    borderRadius: 12,
     alignItems: 'center',
+    elevation: 3
   },
+  closeButtonDisabled: {
+    backgroundColor: '#ccc'
+  },
+  closeButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold'
+  },
+  infoBox: {
+    backgroundColor: '#E3F2FD',
+    padding: 15,
+    margin: 15,
+    borderRadius: 8,
+    marginBottom: 30
+  },
+  infoTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1976D2',
+    marginBottom: 10
+  },
+  infoText: {
+    fontSize: 12,
+    color: '#1976D2',
+    marginBottom: 5
+  }
 });
+
+export default PeriodClosingScreen;

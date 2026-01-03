@@ -2,19 +2,11 @@
  * MAIN SCREEN - TRANSACTION TYPE FOCUSED
  * 
  * Revolutionary approach:
+ * - AI-powered natural language input
  * - User thinks in TRANSACTIONS, not features
  * - One tap to start any transaction
  * - No complex menus
  * - Business health visible immediately
- * 
- * Transaction Types:
- * 1. Sale (Invoice)
- * 2. Purchase
- * 3. Expense
- * 4. Payment In
- * 5. Payment Out
- * 6. Credit Note
- * 7. Debit Note
  */
 
 import React, { useState, useEffect } from 'react';
@@ -250,6 +242,23 @@ const MainScreen = ({ navigation, userId }) => {
           </TouchableOpacity>
         </View>
 
+        {/* AI Transaction Button - PROMINENT */}
+        <TouchableOpacity
+          style={styles.aiButton}
+          onPress={() => navigation.navigate('AITransaction', { businessId: business.id })}
+        >
+          <View style={styles.aiButtonContent}>
+            <Text style={styles.aiButtonIcon}>🤖</Text>
+            <View style={styles.aiButtonText}>
+              <Text style={styles.aiButtonTitle}>AI Transaction</Text>
+              <Text style={styles.aiButtonSubtitle}>
+                Just type what you did in any language
+              </Text>
+            </View>
+            <Text style={styles.aiButtonArrow}>→</Text>
+          </View>
+        </TouchableOpacity>
+
         {/* Business Health */}
         {businessHealth && (
           <TouchableOpacity
@@ -302,8 +311,7 @@ const MainScreen = ({ navigation, userId }) => {
 
         {/* Main Section: What do you want to do? */}
         <View style={styles.mainSection}>
-          <Text style={styles.mainTitle}>What do you want to do?</Text>
-          <Text style={styles.mainSubtitle}>Select a transaction type</Text>
+          <Text style={styles.mainTitle}>Or choose transaction type</Text>
 
           <View style={styles.transactionGrid}>
             {TRANSACTION_TYPES.map((transaction) => (
@@ -450,9 +458,48 @@ const styles = StyleSheet.create({
   settingsIcon: {
     fontSize: 20
   },
+  aiButton: {
+    backgroundColor: '#4CAF50',
+    margin: 15,
+    padding: 20,
+    borderRadius: 15,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5
+  },
+  aiButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  aiButtonIcon: {
+    fontSize: 40,
+    marginRight: 15
+  },
+  aiButtonText: {
+    flex: 1
+  },
+  aiButtonTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFF',
+    marginBottom: 5
+  },
+  aiButtonSubtitle: {
+    fontSize: 14,
+    color: '#FFF',
+    opacity: 0.9
+  },
+  aiButtonArrow: {
+    fontSize: 24,
+    color: '#FFF',
+    fontWeight: 'bold'
+  },
   healthCard: {
     backgroundColor: '#FFF',
     margin: 15,
+    marginTop: 0,
     padding: 15,
     borderRadius: 12,
     borderLeftWidth: 6,
@@ -520,15 +567,10 @@ const styles = StyleSheet.create({
     padding: 15
   },
   mainTitle: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5
-  },
-  mainSubtitle: {
-    fontSize: 16,
     color: '#666',
-    marginBottom: 20
+    marginBottom: 15
   },
   transactionGrid: {
     flexDirection: 'row',

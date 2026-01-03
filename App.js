@@ -26,6 +26,7 @@ import BusinessSetupScreen from './src/screens/setup/BusinessSetupScreen';
 // Import main screens
 import DashboardScreen from './src/screens/DashboardScreen';
 import CreateInvoiceScreen from './src/screens/CreateInvoiceScreen';
+import JournalEntryScreen from './src/screens/JournalEntryScreen';
 import RecordPaymentScreen from './src/screens/RecordPaymentScreen';
 import ReportsScreen from './src/screens/ReportsScreen';
 import StockManagementScreen from './src/screens/StockManagementScreen';
@@ -182,6 +183,12 @@ const App = () => {
             options={({ route }) => ({ 
               title: `Create ${route.params?.type === 'SALES' ? 'Sales' : 'Purchase'} Invoice`
             })}
+          />
+          <Stack.Screen 
+            name="JournalEntry" 
+            component={JournalEntryScreen}
+            initialParams={{ userId, businessId }}
+            options={{ title: 'Create Journal Entry' }}
           />
           <Stack.Screen 
             name="PeriodClosing" 

@@ -1,430 +1,517 @@
+/**
+ * DASHBOARD SCREEN
+ * 
+ * Main screen showing:
+ * - Business health in 3 seconds
+ * - Quick actions
+ * - Today's summary
+ * - Real-time insights
+ */
+
 import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
   ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Animated,
+  TouchableOpacity,
+  RefreshControl,
+  Dimensions
 } from 'react-native';
-import { TransactionService } from '../services/TransactionService';
-import { SetupService } from '../services/SetupService';
-import MenuDrawer from '../components/MenuDrawer';
+import { supabase } from '../services/supabase';
+import BusinessHealthMonitor from '../services/health/BusinessHealthMonitor';
+import TaxOptimizationEngine from '../services/tax/TaxOptimizationEngine';
 
-const DashboardScreen = ({ navigation }) => {
-  const [inputText, setInputText] = useState('');
-  const [transactions, setTransactions] = useState([]);
-  const [isRecording, setIsRecording] = useState(false);
-  const [currentDate, setCurrentDate] = useState('');
-  const [menuVisible, setMenuVisible] = useState(false);
-  const [businessSetup, setBusinessSetup] = useState(null);
-  const micScale = new Animated.Value(1);
+const { width } = Dimensions.get('window');
+
+const DashboardScreen = ({ navigation, userId }) => {
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [businessHealth, setBusinessHealth] = useState(null);
+  const [todaySummary, setTodaySummary] = useState(null);
+  const [taxSavings, setTaxSavings] = useState(null);
+  const [business, setBusiness] = useState(null);
 
   useEffect(() => {
-    loadTodayTransactions();
-    updateDate();
-    loadBusinessSetup();
+    loadDashboard();
   }, []);
 
-  const loadBusinessSetup = async () => {
-    const result = await SetupService.getBusinessSetup();
-    if (result.success) {
-      setBusinessSetup(result.data);
-    }
-  };
+  const loadDashboard = async () => {
+    try {
+      setLoading(true);
 
-  const updateDate = () => {
-    const today = new Date();
-    const options = { day: 'numeric', month: 'long', year: 'numeric' };
-    setCurrentDate(today.toLocaleDateString('en-IN', options));
-  };
+      // Get business
+      const { data: businessData } = await supabase
+        .from('businesses')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
 
-  const loadTodayTransactions = async () => {
-    const result = await TransactionService.getTodayTransactions();
-    if (result.success) {
-      setTransactions(result.data);
-    }
-  };
-
-  const handleSend = async () => {
-    if (!inputText.trim()) return;
-
-    const result = await TransactionService.processTransaction(inputText);
-    
-    if (result.success) {
-      setTransactions([result.data, ...transactions]);
-      setInputText('');
-    }
-  };
-
-  const handleMicPress = () => {
-    setIsRecording(true);
-    Animated.sequence([
-      Animated.timing(micScale, {
-        toValue: 1.2,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(micScale, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Voice recording logic will be implemented here
-    setTimeout(() => {
-      setIsRecording(false);
-    }, 2000);
-  };
-
-  const renderTransactionCard = (transaction) => {
-    const getCardStyle = () => {
-      switch (transaction.status) {
-        case 'success':
-          return styles.successCard;
-        case 'clarification':
-          return styles.clarificationCard;
-        case 'error':
-          return styles.errorCard;
-        default:
-          return styles.successCard;
+      if (!businessData) {
+        navigation.replace('BusinessSetup');
+        return;
       }
-    };
 
-    const getIcon = () => {
-      switch (transaction.status) {
-        case 'success':
-          return '✔';
-        case 'clarification':
-          return '⚠';
-        case 'error':
-          return '❌';
-        default:
-          return '✔';
-      }
-    };
+      setBusiness(businessData);
 
+      // Load business health
+      const health = await BusinessHealthMonitor.getBusinessHealth(businessData.id);
+      setBusinessHealth(health);
+
+      // Load today's summary
+      const summary = await loadTodaySummary(businessData.id);
+      setTodaySummary(summary);
+
+      // Load tax savings opportunities
+      const savings = await TaxOptimizationEngine.getRealTimeSavings({
+        amount: summary.todaySales,
+        type: 'sale',
+        date: new Date().toISOString(),
+        country: businessData.country,
+        items: []
+      });
+      setTaxSavings(savings);
+
+    } catch (error) {
+      console.error('Dashboard load error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadTodaySummary = async (businessId) => {
+    const today = new Date().toISOString().split('T')[0];
+
+    const { data: transactions } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('business_id', businessId)
+      .gte('date', today);
+
+    const sales = transactions?.filter(t => t.type === 'sale') || [];
+    const purchases = transactions?.filter(t => t.type === 'purchase') || [];
+    const expenses = transactions?.filter(t => t.type === 'expense') || [];
+
+    return {
+      todaySales: sales.reduce((sum, s) => sum + s.amount, 0),
+      todayPurchases: purchases.reduce((sum, p) => sum + p.amount, 0),
+      todayExpenses: expenses.reduce((sum, e) => sum + e.amount, 0),
+      transactionCount: transactions?.length || 0,
+      salesCount: sales.length,
+      purchaseCount: purchases.length
+    };
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadDashboard();
+    setRefreshing(false);
+  };
+
+  const getHealthColor = (status) => {
+    if (status === 'healthy') return '#4CAF50';
+    if (status === 'watch_out') return '#FF9800';
+    return '#F44336';
+  };
+
+  const getHealthEmoji = (status) => {
+    if (status === 'healthy') return '🟢';
+    if (status === 'watch_out') return '🟡';
+    return '🔴';
+  };
+
+  if (loading) {
     return (
-      <View key={transaction.id} style={[styles.transactionCard, getCardStyle()]}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardIcon}>{getIcon()}</Text>
-          <Text style={styles.cardTitle}>{transaction.title}</Text>
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading Dashboard...</Text>
         </View>
-        <Text style={styles.cardDescription}>{transaction.description}</Text>
-        {transaction.amount && (
-          <Text style={styles.cardAmount}>₹{transaction.amount.toLocaleString('en-IN')}</Text>
-        )}
       </View>
     );
-  };
+  }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <ScrollView
       style={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
     >
-      {/* Top Bar */}
-      <View style={styles.topBar}>
-        <View style={styles.topBarLeft}>
-          <TouchableOpacity 
-            style={styles.menuButton}
-            onPress={() => setMenuVisible(true)}
-          >
-            <View style={styles.menuLine} />
-            <View style={styles.menuLine} />
-            <View style={styles.menuLine} />
-          </TouchableOpacity>
-          <View style={styles.titleContainer}>
-            <Text style={styles.appTitle}>MindStack</Text>
-            <Text style={styles.dateText}>Today • {currentDate}</Text>
-          </View>
-        </View>
-        <View style={styles.topBarRight}>
-          <TouchableOpacity 
-            style={styles.iconButton}
-            onPress={() => navigation.navigate('Reports')}
-          >
-            <Text style={styles.iconText}>📒</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.iconButton}
-            onPress={() => navigation.navigate('Settings')}
-          >
-            <Text style={styles.iconText}>⚙</Text>
-          </TouchableOpacity>
-        </View>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.greeting}>Hello, {business?.name || 'User'}!</Text>
+        <Text style={styles.date}>{new Date().toLocaleDateString('en-IN', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })}</Text>
       </View>
 
-      {/* Transaction Feed */}
-      <ScrollView 
-        style={styles.feedContainer}
-        contentContainerStyle={styles.feedContent}
-      >
-        {transactions.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>
-              No transactions yet today
+      {/* Business Health Card */}
+      {businessHealth && (
+        <TouchableOpacity
+          style={[styles.healthCard, { borderLeftColor: getHealthColor(businessHealth.status) }]}
+          onPress={() => navigation.navigate('BusinessHealth', { health: businessHealth })}
+        >
+          <View style={styles.healthHeader}>
+            <Text style={styles.healthEmoji}>
+              {getHealthEmoji(businessHealth.status)}
             </Text>
-            <Text style={styles.emptyStateSubtext}>
-              Type or speak your first transaction below
-            </Text>
+            <Text style={styles.healthTitle}>BUSINESS HEALTH</Text>
           </View>
-        ) : (
-          transactions.map(renderTransactionCard)
-        )}
-      </ScrollView>
-
-      {/* Input Box */}
-      <View style={styles.inputContainer}>
-        <TouchableOpacity
-          style={styles.micButton}
-          onPress={handleMicPress}
-          activeOpacity={0.7}
-        >
-          <Animated.View style={{ transform: [{ scale: micScale }] }}>
-            <Text style={styles.micIcon}>🎤</Text>
-          </Animated.View>
+          <Text style={[styles.healthStatus, { color: getHealthColor(businessHealth.status) }]}>
+            {businessHealth.status.toUpperCase()}
+          </Text>
+          <Text style={styles.healthMessage}>{businessHealth.message}</Text>
+          
+          {businessHealth.actions && businessHealth.actions.length > 0 && (
+            <View style={styles.actionBadge}>
+              <Text style={styles.actionBadgeText}>
+                {businessHealth.actions.length} action{businessHealth.actions.length > 1 ? 's' : ''} needed
+              </Text>
+            </View>
+          )}
         </TouchableOpacity>
+      )}
 
-        <TextInput
-          style={styles.textInput}
-          placeholder="Type or speak your transaction…"
-          placeholderTextColor="#999"
-          value={inputText}
-          onChangeText={setInputText}
-          multiline
-          maxLength={500}
-        />
+      {/* Today's Summary */}
+      {todaySummary && (
+        <View style={styles.summaryCard}>
+          <Text style={styles.cardTitle}>📊 Today's Summary</Text>
+          
+          <View style={styles.summaryGrid}>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Sales</Text>
+              <Text style={[styles.summaryValue, { color: '#4CAF50' }]}>
+                ₹{todaySummary.todaySales.toLocaleString('en-IN')}
+              </Text>
+              <Text style={styles.summaryCount}>{todaySummary.salesCount} transactions</Text>
+            </View>
 
-        <TouchableOpacity
-          style={[
-            styles.sendButton,
-            !inputText.trim() && styles.sendButtonDisabled,
-          ]}
-          onPress={handleSend}
-          disabled={!inputText.trim()}
-        >
-          <Text style={styles.sendIcon}>➤</Text>
-        </TouchableOpacity>
-      </View>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Purchases</Text>
+              <Text style={[styles.summaryValue, { color: '#FF9800' }]}>
+                ₹{todaySummary.todayPurchases.toLocaleString('en-IN')}
+              </Text>
+              <Text style={styles.summaryCount}>{todaySummary.purchaseCount} transactions</Text>
+            </View>
 
-      {isRecording && (
-        <View style={styles.recordingIndicator}>
-          <View style={styles.recordingDot} />
-          <Text style={styles.recordingText}>Listening...</Text>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Expenses</Text>
+              <Text style={[styles.summaryValue, { color: '#F44336' }]}>
+                ₹{todaySummary.todayExpenses.toLocaleString('en-IN')}
+              </Text>
+            </View>
+
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Profit</Text>
+              <Text style={[styles.summaryValue, { color: '#2196F3' }]}>
+                ₹{(todaySummary.todaySales - todaySummary.todayPurchases - todaySummary.todayExpenses).toLocaleString('en-IN')}
+              </Text>
+            </View>
+          </View>
         </View>
       )}
 
-      {/* Menu Drawer */}
-      <MenuDrawer
-        visible={menuVisible}
-        onClose={() => setMenuVisible(false)}
-        navigation={navigation}
-        businessSetup={businessSetup}
-      />
-    </KeyboardAvoidingView>
+      {/* Tax Savings Alert */}
+      {taxSavings && taxSavings.hasSavings && (
+        <TouchableOpacity
+          style={styles.savingsCard}
+          onPress={() => navigation.navigate('TaxOptimization', { savings: taxSavings })}
+        >
+          <Text style={styles.savingsEmoji}>💰</Text>
+          <Text style={styles.savingsTitle}>Tax Savings Available!</Text>
+          <Text style={styles.savingsAmount}>
+            Save ₹{taxSavings.totalPotentialSavings.toFixed(0)}
+          </Text>
+          <Text style={styles.savingsCount}>
+            {taxSavings.suggestions.length} opportunities found
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Quick Actions */}
+      <View style={styles.quickActions}>
+        <Text style={styles.cardTitle}>⚡ Quick Actions</Text>
+        
+        <View style={styles.actionGrid}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('NewSale')}
+          >
+            <Text style={styles.actionIcon}>💵</Text>
+            <Text style={styles.actionText}>New Sale</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('NewPurchase')}
+          >
+            <Text style={styles.actionIcon}>🛒</Text>
+            <Text style={styles.actionText}>New Purchase</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('NewExpense')}
+          >
+            <Text style={styles.actionIcon}>💸</Text>
+            <Text style={styles.actionText}>Add Expense</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('POSBilling')}
+          >
+            <Text style={styles.actionIcon}>🖨️</Text>
+            <Text style={styles.actionText}>POS Billing</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('Inventory')}
+          >
+            <Text style={styles.actionIcon}>📦</Text>
+            <Text style={styles.actionText}>Inventory</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('Reports')}
+          >
+            <Text style={styles.actionIcon}>📈</Text>
+            <Text style={styles.actionText}>Reports</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Recent Activity */}
+      <View style={styles.recentActivity}>
+        <View style={styles.activityHeader}>
+          <Text style={styles.cardTitle}>📋 Recent Activity</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Transactions')}>
+            <Text style={styles.viewAll}>View All →</Text>
+          </TouchableOpacity>
+        </View>
+        
+        {/* This would show recent transactions */}
+        <Text style={styles.comingSoon}>Recent transactions will appear here</Text>
+      </View>
+
+      {/* Bottom spacing */}
+      <View style={{ height: 30 }} />
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F5F5F5'
   },
-  topBar: {
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666'
+  },
+  header: {
+    backgroundColor: '#2196F3',
+    padding: 20,
+    paddingTop: 50,
+    paddingBottom: 30
+  },
+  greeting: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFF',
+    marginBottom: 5
+  },
+  date: {
+    fontSize: 14,
+    color: '#FFF',
+    opacity: 0.9
+  },
+  healthCard: {
+    backgroundColor: '#FFF',
+    margin: 15,
+    padding: 20,
+    borderRadius: 12,
+    borderLeftWidth: 6,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4
+  },
+  healthHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10
+  },
+  healthEmoji: {
+    fontSize: 32,
+    marginRight: 10
+  },
+  healthTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#666',
+    letterSpacing: 1
+  },
+  healthStatus: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 5
+  },
+  healthMessage: {
+    fontSize: 15,
+    color: '#666',
+    marginBottom: 10
+  },
+  actionBadge: {
+    backgroundColor: '#FFF3E0',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+    marginTop: 10
+  },
+  actionBadgeText: {
+    fontSize: 13,
+    color: '#FF9800',
+    fontWeight: '600'
+  },
+  summaryCard: {
+    backgroundColor: '#FFF',
+    margin: 15,
+    marginTop: 0,
+    padding: 20,
+    borderRadius: 12,
+    elevation: 3
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 15
+  },
+  summaryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -10
+  },
+  summaryItem: {
+    width: '50%',
+    padding: 10,
+    marginBottom: 10
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 5
+  },
+  summaryValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 3
+  },
+  summaryCount: {
+    fontSize: 12,
+    color: '#999'
+  },
+  savingsCard: {
+    backgroundColor: '#E8F5E9',
+    margin: 15,
+    marginTop: 0,
+    padding: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#4CAF50'
+  },
+  savingsEmoji: {
+    fontSize: 40,
+    marginBottom: 10
+  },
+  savingsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2E7D32',
+    marginBottom: 5
+  },
+  savingsAmount: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#1B5E20',
+    marginBottom: 5
+  },
+  savingsCount: {
+    fontSize: 14,
+    color: '#388E3C'
+  },
+  quickActions: {
+    backgroundColor: '#FFF',
+    margin: 15,
+    marginTop: 0,
+    padding: 20,
+    borderRadius: 12,
+    elevation: 3
+  },
+  actionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -5
+  },
+  actionButton: {
+    width: (width - 60) / 3,
+    margin: 5,
+    padding: 15,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 90
+  },
+  actionIcon: {
+    fontSize: 32,
+    marginBottom: 8
+  },
+  actionText: {
+    fontSize: 13,
+    color: '#333',
+    fontWeight: '600',
+    textAlign: 'center'
+  },
+  recentActivity: {
+    backgroundColor: '#FFF',
+    margin: 15,
+    marginTop: 0,
+    padding: 20,
+    borderRadius: 12,
+    elevation: 3
+  },
+  activityHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    marginBottom: 15
   },
-  topBarLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
+  viewAll: {
+    fontSize: 14,
+    color: '#2196F3',
+    fontWeight: '600'
   },
-  menuButton: {
-    width: 32,
-    height: 32,
-    justifyContent: 'space-around',
-    paddingVertical: 6,
-    marginRight: 16,
-  },
-  menuLine: {
-    width: 24,
-    height: 2,
-    backgroundColor: '#1A1A1A',
-    borderRadius: 1,
-  },
-  titleContainer: {
-    flex: 1,
-  },
-  appTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1A1A1A',
-  },
-  dateText: {
-    fontSize: 13,
-    color: '#666',
-    marginTop: 2,
-  },
-  topBarRight: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  iconButton: {
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  iconText: {
-    fontSize: 20,
-  },
-  feedContainer: {
-    flex: 1,
-  },
-  feedContent: {
-    padding: 20,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyStateText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 8,
-  },
-  emptyStateSubtext: {
+  comingSoon: {
     fontSize: 14,
     color: '#999',
-  },
-  transactionCard: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderLeftWidth: 4,
-  },
-  successCard: {
-    borderLeftColor: '#34C759',
-  },
-  clarificationCard: {
-    borderLeftColor: '#FF9500',
-  },
-  errorCard: {
-    borderLeftColor: '#FF3B30',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  cardIcon: {
-    fontSize: 18,
-    marginRight: 8,
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1A1A1A',
-  },
-  cardDescription: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  cardAmount: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1A1A1A',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-    gap: 12,
-  },
-  micButton: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 22,
-  },
-  micIcon: {
-    fontSize: 24,
-  },
-  textInput: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#1A1A1A',
-    maxHeight: 100,
-  },
-  sendButton: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#1A1A1A',
-    borderRadius: 22,
-  },
-  sendButtonDisabled: {
-    backgroundColor: '#E0E0E0',
-  },
-  sendIcon: {
-    fontSize: 20,
-    color: '#FFFFFF',
-  },
-  recordingIndicator: {
-    position: 'absolute',
-    top: 100,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FF3B30',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    marginHorizontal: 20,
-    borderRadius: 20,
-  },
-  recordingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#FFFFFF',
-    marginRight: 8,
-  },
-  recordingText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
+    textAlign: 'center',
+    paddingVertical: 20
+  }
 });
 
 export default DashboardScreen;

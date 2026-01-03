@@ -53,6 +53,28 @@ class ScreenConnector {
 
   /**
    * ========================================
+   * JOURNAL ENTRY SCREEN CONNECTOR
+   * ========================================
+   */
+  static async createJournalEntry(journalData, businessId) {
+    try {
+      const result = await OneClickServiceManager.createJournalEntryOneClick(journalData, businessId);
+      
+      if (result.success) {
+        Alert.alert('✅ Success', result.message);
+      } else {
+        Alert.alert('❌ Error', result.error);
+      }
+      
+      return result;
+    } catch (error) {
+      Alert.alert('❌ Error', error.message);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * ========================================
    * AI TRANSACTION SCREEN CONNECTOR
    * ========================================
    */

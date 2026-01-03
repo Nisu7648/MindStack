@@ -19,6 +19,7 @@ import FinalAccountsPDFService from '../accounting/finalAccountsPDFService';
 import PeriodClosingService from '../accounting/periodClosingService';
 import BusinessHealthMonitor from '../health/BusinessHealthMonitor';
 import AITransactionParser from '../ai/AITransactionParser';
+import { supabase } from '../supabase';
 
 class OneClickServiceManager {
   
@@ -75,6 +76,75 @@ class OneClickServiceManager {
 
     } catch (error) {
       console.error('One-click invoice error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * ========================================
+   * ONE-CLICK JOURNAL ENTRY
+   * ========================================
+   * User creates journal entry → Auto-posted to ledger + PDF generated
+   */
+  static async createJournalEntryOneClick(journalData, businessId) {
+    try {
+      console.log('📝 ONE-CLICK JOURNAL ENTRY STARTED...');
+
+      // Step 1: Create journal entry in database
+      const { data: journalEntry, error } = await supabase
+        .from('journal_entries')
+        .insert({
+          business_id: businessId,
+          voucher_number: journalData.voucherNumber,
+          date: journalData.date,
+          narration: journalData.narration,
+          total_debit: journalData.entries.reduce((sum, e) => sum + e.debit, 0),
+          total_credit: journalData.entries.reduce((sum, e) => sum + e.credit, 0)
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Step 2: Create journal entry lines
+      const lines = journalData.entries.map(entry => ({
+        journal_entry_id: journalEntry.id,
+        account_id: entry.accountId,
+        account_name: entry.accountName,
+        debit: entry.debit,
+        credit: entry.credit
+      }));
+
+      await supabase.from('journal_entry_lines').insert(lines);
+
+      // Step 3: Auto-post to ledger
+      for (const entry of journalData.entries) {
+        await supabase.from('ledger_entries').insert({
+          business_id: businessId,
+          account_id: entry.accountId,
+          date: journalData.date,
+          voucher_type: 'Journal',
+          voucher_number: journalData.voucherNumber,
+          narration: journalData.narration,
+          debit: entry.debit,
+          credit: entry.credit
+        });
+      }
+
+      // Step 4: Generate PDF
+      const pdf = await FinalAccountsPDFService.generateJournalEntryPDF(journalEntry, journalData);
+
+      console.log('✅ ONE-CLICK JOURNAL ENTRY COMPLETE!');
+
+      return {
+        success: true,
+        journalEntry,
+        pdf: pdf.filePath,
+        message: `Journal entry ${journalData.voucherNumber} created and posted to ledger!`
+      };
+
+    } catch (error) {
+      console.error('One-click journal entry error:', error);
       return { success: false, error: error.message };
     }
   }

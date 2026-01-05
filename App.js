@@ -10,6 +10,8 @@
  * - 14-day free trial
  * - Swiss-specific features (Cantonal tax, Multi-language, Social security)
  * - Background automation
+ * - Multi-language UI (31 languages)
+ * - Live translation (100+ languages)
  */
 
 import React, { useEffect, useState } from 'react';
@@ -37,9 +39,13 @@ import CustomerManagementScreen from './src/screens/CustomerManagementScreen';
 import ProductManagementScreen from './src/screens/ProductManagementScreen';
 import PeriodClosingScreen from './src/screens/PeriodClosingScreen';
 
+// Import translation screen
+import TranslationSetupScreen from './src/screens/TranslationSetupScreen';
+
 // Import services
 import { AuthService } from './src/services/AuthService';
 import { SetupService } from './src/services/SetupService';
+import TranslationService from './src/services/TranslationService';
 import ScreenConnector from './src/services/integration/ScreenConnector';
 
 // Import Error Boundary
@@ -61,6 +67,11 @@ const App = () => {
   const checkAppStatus = async () => {
     try {
       console.log('🇨🇭 Initializing MindStack - Swiss Edition...');
+
+      // Initialize translation service
+      await TranslationService.initialize();
+      const currentLanguage = TranslationService.getLanguage();
+      console.log(`🌍 Language: ${currentLanguage}`);
 
       // Check authentication
       const authenticated = await AuthService.isAuthenticated();
@@ -94,7 +105,7 @@ const App = () => {
             console.log('🇨🇭 Swiss-specific services:');
             console.log('   - Cantonal tax tracking');
             console.log('   - Social security (AHV/IV/EO)');
-            console.log('   - Multi-language support');
+            console.log('   - Multi-language support (31 languages)');
           }
         }
       }
@@ -247,6 +258,16 @@ const App = () => {
             component={ProductManagementScreen}
             initialParams={{ userId, businessId }}
             options={{ title: 'Product Management' }}
+          />
+
+          {/* Translation Setup Screen */}
+          <Stack.Screen 
+            name="TranslationSetup" 
+            component={TranslationSetupScreen}
+            options={{ 
+              title: 'Translation Setup',
+              headerBackTitle: 'Back'
+            }}
           />
         </Stack.Navigator>
       </NavigationContainer>

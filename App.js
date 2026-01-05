@@ -1,5 +1,5 @@
 /**
- * APP.JS - WITH BACKGROUND SERVICES
+ * APP.JS - WITH BACKGROUND SERVICES & ENHANCED SETUP
  * 
  * Initializes background services on app start
  * Services run automatically every hour:
@@ -8,6 +8,12 @@
  * - Bank reconciliation
  * - Inventory alerts
  * - Payment reminders
+ * 
+ * Features:
+ * - Multi-country support (15 countries)
+ * - Enhanced business setup wizard (5 steps)
+ * - Complete authentication flow
+ * - Background automation
  */
 
 import React, { useEffect, useState } from 'react';
@@ -20,8 +26,9 @@ import SignUpScreen from './src/screens/auth/SignUpScreen';
 import SignInScreen from './src/screens/auth/SignInScreen';
 import ForgotPasswordScreen from './src/screens/auth/ForgotPasswordScreen';
 
-// Import setup screen
+// Import setup screens
 import BusinessSetupScreen from './src/screens/setup/BusinessSetupScreen';
+import EnhancedBusinessSetupScreen from './src/screens/setup/EnhancedBusinessSetupScreen';
 
 // Import main screens
 import DashboardScreen from './src/screens/DashboardScreen';
@@ -103,7 +110,7 @@ const App = () => {
       return 'SignIn';
     }
     if (!isSetupComplete) {
-      return 'BusinessSetup';
+      return 'EnhancedBusinessSetup';
     }
     return 'Dashboard';
   };
@@ -156,13 +163,22 @@ const App = () => {
             }}
           />
 
-          {/* Setup Screen */}
+          {/* Setup Screens */}
           <Stack.Screen 
             name="BusinessSetup" 
             component={BusinessSetupScreen}
             options={{ 
               headerShown: false,
-              gestureEnabled: false, // Prevent swipe back
+              gestureEnabled: false,
+            }}
+          />
+          <Stack.Screen 
+            name="EnhancedBusinessSetup" 
+            component={EnhancedBusinessSetupScreen}
+            options={{ 
+              title: 'Business Setup',
+              headerLeft: null,
+              gestureEnabled: false,
             }}
           />
 
@@ -173,7 +189,7 @@ const App = () => {
             initialParams={{ userId, businessId }}
             options={{ 
               title: 'Dashboard',
-              headerLeft: null // Disable back button
+              headerLeft: null
             }}
           />
           <Stack.Screen 

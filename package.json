@@ -47,6 +47,8 @@
     "@supabase/supabase-js": "^2.39.0",
     "@tensorflow/tfjs": "^4.0.0",
     "@tensorflow/tfjs-react-native": "^0.8.0",
+    "axios": "^1.6.5",
+    "crypto-js": "^4.2.0",
     "lodash": "^4.17.21",
     "moment": "^2.29.4",
     "react": "18.2.0",
@@ -111,6 +113,8 @@
     "completeSolution": true,
     "phoneStorage": true,
     "pdfGeneration": true,
-    "backupRestore": true
+    "backupRestore": true,
+    "multiLanguage": true,
+    "liveTranslation": true
   }
 }

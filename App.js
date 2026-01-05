@@ -1,18 +1,14 @@
 /**
- * APP.JS - WITH BACKGROUND SERVICES & ENHANCED SETUP
+ * APP.JS - SWISS-OPTIMIZED WITH PREMIUM SUBSCRIPTION
  * 
- * Initializes background services on app start
- * Services run automatically every hour:
- * - Business health check
- * - Tax optimization scan
- * - Bank reconciliation
- * - Inventory alerts
- * - Payment reminders
+ * Primary Target: Switzerland 🇨🇭
+ * Premium Plan: 99 CHF/month
  * 
  * Features:
- * - Multi-country support (15 countries)
- * - Enhanced business setup wizard (5 steps)
- * - Complete authentication flow
+ * - Multi-country support (Switzerland first)
+ * - Premium subscription model
+ * - 14-day free trial
+ * - Swiss-specific features (Cantonal tax, Multi-language, Social security)
  * - Background automation
  */
 
@@ -27,8 +23,7 @@ import SignInScreen from './src/screens/auth/SignInScreen';
 import ForgotPasswordScreen from './src/screens/auth/ForgotPasswordScreen';
 
 // Import setup screens
-import BusinessSetupScreen from './src/screens/setup/BusinessSetupScreen';
-import EnhancedBusinessSetupScreen from './src/screens/setup/EnhancedBusinessSetupScreen';
+import SwissBusinessSetupScreen from './src/screens/setup/SwissBusinessSetupScreen';
 
 // Import main screens
 import DashboardScreen from './src/screens/DashboardScreen';
@@ -65,7 +60,7 @@ const App = () => {
 
   const checkAppStatus = async () => {
     try {
-      console.log('🚀 Initializing MindStack...');
+      console.log('🇨🇭 Initializing MindStack - Swiss Edition...');
 
       // Check authentication
       const authenticated = await AuthService.isAuthenticated();
@@ -94,6 +89,13 @@ const App = () => {
           console.log('   - Bank reconciliation (every hour)');
           console.log('   - Inventory alerts (every hour)');
           console.log('   - Payment reminders (every hour)');
+          
+          if (business.country === 'CH') {
+            console.log('🇨🇭 Swiss-specific services:');
+            console.log('   - Cantonal tax tracking');
+            console.log('   - Social security (AHV/IV/EO)');
+            console.log('   - Multi-language support');
+          }
         }
       }
     } catch (error) {
@@ -110,7 +112,7 @@ const App = () => {
       return 'SignIn';
     }
     if (!isSetupComplete) {
-      return 'EnhancedBusinessSetup';
+      return 'SwissBusinessSetup';
     }
     return 'Dashboard';
   };
@@ -118,7 +120,7 @@ const App = () => {
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' }}>
-        <ActivityIndicator size="large" color="#1A1A1A" />
+        <ActivityIndicator size="large" color="#DC143C" />
       </View>
     );
   }
@@ -163,18 +165,10 @@ const App = () => {
             }}
           />
 
-          {/* Setup Screens */}
+          {/* Setup Screen - Swiss Optimized */}
           <Stack.Screen 
-            name="BusinessSetup" 
-            component={BusinessSetupScreen}
-            options={{ 
-              headerShown: false,
-              gestureEnabled: false,
-            }}
-          />
-          <Stack.Screen 
-            name="EnhancedBusinessSetup" 
-            component={EnhancedBusinessSetupScreen}
+            name="SwissBusinessSetup" 
+            component={SwissBusinessSetupScreen}
             options={{ 
               title: 'Business Setup',
               headerLeft: null,
